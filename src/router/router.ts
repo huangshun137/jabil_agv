@@ -12,6 +12,16 @@ const routes: Array<RouteRecordRaw> = [
     name: "StoreTest",
     component: () => import("@/views/storeTest.vue"),
   },
+  {
+    path: "/agv-edit",
+    name: "AGVEdit",
+    component: () => import("@/views/agvEdit/index.vue"),
+  },
+  {
+    path: "/agv-preview",
+    name: "AGVPreview",
+    component: () => import("@/views/agvPreview/index.vue"),
+  },
   // {
   //   path: "/about",
   //   name: "About",
@@ -20,11 +30,9 @@ const routes: Array<RouteRecordRaw> = [
   // },
 ];
 
-const routers = [...routes];
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.VITE_APP_BASE_URL),
-  routes: routers,
+  routes: [...routes],
 });
 
 export default router;

@@ -7,6 +7,7 @@ import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
 import { viteMockServe } from "vite-plugin-mock";
+import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
@@ -19,6 +20,12 @@ export default defineConfig(({ command }) => {
       }),
       Components({
         resolvers: [ElementPlusResolver()],
+      }),
+      createSvgIconsPlugin({
+        // 指定要缓存.svg文件的文件夹
+        iconDirs: [path.resolve(process.cwd(), "src/assets/icons")],
+        // Specify symbolId format
+        symbolId: "icon-[dir]-[name]",
       }),
     ],
     resolve: {
