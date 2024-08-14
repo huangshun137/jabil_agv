@@ -1,26 +1,18 @@
+<!-- 此版本为无插件实现拖拽功能，由于需要旋转和缩放，所以使用插件实现 -->
 <template>
   <div class="agv-edit-page">
     <div style="font-size: 0; text-align: center">
       <img src="@/assets/img/top.jpg" style="height: 80px; min-width: 90%" />
     </div>
-    <div class="drag-page">
+    <div class="drag-page" @mousemove="handleMouseMove">
       <div class="drag-add-content">
         <div
           class="drag-add-item"
           v-for="(item, index) in dragItemTemplates"
           :key="item.name"
-          :style="{
-            background:
-              item.type === 'custom' && item.img ? `url(${item.img})` : 'unset',
-          }"
           @click="handleItemClick(index)"
         >
-          <svg-icon
-            :name="'icon-' + item.img"
-            :size="100"
-            color="#1296DB"
-            v-if="item.type === '_svg'"
-          ></svg-icon>
+          <img :src="item.img" :alt="item.name" v-if="item.img" />
           <div
             v-else-if="item.type === 'line'"
             class="drag-template-line"
@@ -36,36 +28,24 @@
         :style="{
           width: canvasWidth + 'px',
           height: canvasHeight + 'px',
+          background: `url(${bg})`,
         }"
       >
-        <VueDragResizeRotate
+        <div
+          class="drag-item"
           v-for="(item, index) in dragItems"
           :key="item.id"
-          :parent="true"
-          :x="item.x"
-          :y="item.y"
-          :w="item.width"
-          :h="item.height"
-          :rotatable="true"
-          class-name="drag-item"
           :style="{
-            background:
-              item.type === 'custom' && item.img ? `url(${item.img})` : 'unset',
+            width: item.width + 'px',
+            height: item.height + 'px',
+            left: item.x + 'px',
+            top: item.y + 'px',
+            borderColor: item.dragFlag ? '#409EFF' : '#ccc',
           }"
-          @resizing="
-            (x: number, y: number, width: number, height: number) =>
-              onResize(x, y, width, height, index)
-          "
-          @dragstop="(x: number, y: number) => onDragStop(x, y, index)"
-          @rotatestop="(degree: number) => onRotateStop(degree, index)"
+          @mousedown="handleMouseDown($event, index)"
           @dblclick="handleItemDblClick(index)"
         >
-          <svg-icon
-            :name="'icon-' + item.img"
-            :size="Math.min(item.width, item.height)"
-            color="#1296DB"
-            v-if="item.type === '_svg'"
-          ></svg-icon>
+          <img :src="item.img" :alt="item.name" v-if="item.img" />
           <div v-else-if="item.type === 'line'" class="drag-line"></div>
           <div
             v-else-if="item.type === 'point'"
@@ -77,15 +57,10 @@
             <p>x: {{ item.x }}</p>
             <p>y: {{ item.y }}</p>
           </div>
-        </VueDragResizeRotate>
+        </div>
       </div>
     </div>
-    <el-dialog
-      title="请填写必要参数"
-      v-model="modalVisible"
-      width="500px"
-      @closed="() => editItem && (editItem = undefined)"
-    >
+    <el-dialog title="请填写必要参数" v-model="modalVisible" width="500px">
       <p v-for="item in modalContentList" :key="item.key">
         <span>{{ item.label }}：</span>
         <template v-if="editItem">
@@ -121,6 +96,10 @@
 </template>
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
+import bg from "@/assets/img/bg_proc.jpg";
+import jt from "@/assets/img/jt.png";
+import cdf from "@/assets/img/cdf.png";
+import car from "@/assets/img/car.png";
 import {
   AddItem,
   DragItem,
@@ -128,41 +107,41 @@ import {
   EditItem,
   ModalContent,
   ModalContentKey,
+  MouseCoor,
 } from ".";
 import { omit } from "lodash-es";
 
 const canvasWidth = 1000;
 const canvasHeight = 533;
-// const LEFT = 330; // 画布距左边的像素
-// const TOP = 80; // 画布距上边的像素
+const LEFT = 330; // 画布距左边的像素
+const TOP = 80; // 画布距上边的像素
 const modalContentList: ModalContent[] = [
   { label: "宽度", key: "width" },
   { label: "高度", key: "height" },
   { label: "X轴坐标", key: "x" },
   { label: "Y轴坐标", key: "y" },
-  { label: "旋转角度", key: "rotate" },
 ];
 const dragItemTemplates = reactive<DragItemTemplate[]>([
   {
-    name: "机台",
-    img: "machine",
+    name: "镜头",
+    img: jt,
     width: 113,
     height: 134,
-    type: "_svg",
+    type: "custom",
   },
   {
     name: "充电房",
-    img: "charge-room",
+    img: cdf,
     width: 190,
     height: 134,
-    type: "_svg",
+    type: "custom",
   },
   {
     name: "车",
-    img: "agv",
+    img: car,
     width: 42,
     height: 39,
-    type: "_svg",
+    type: "custom",
   },
   {
     name: "线",
@@ -186,10 +165,10 @@ const initAddItem: AddItem = {
   height: 200,
   x: 0,
   y: 0,
-  rotate: 0,
 };
 const addItem = reactive<AddItem>({ ...initAddItem });
 const dragItems = reactive<Array<DragItem>>([]);
+const mouseCoor = ref<MouseCoor>({ x: 0, y: 0 });
 const editItem = ref<EditItem>();
 
 const handleItemClick = (index: number) => {
@@ -233,38 +212,32 @@ const handleConfrimAdd = () => {
 };
 const handleModalClose = () => {
   modalVisible.value = false;
-  // editItem.value = undefined;
+  editItem.value = undefined;
 };
 
-// 缩放事件
-const onResize = (
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  index: number
-) => {
-  dragItems[index] = {
-    ...dragItems[index],
-    x,
-    y,
-    width,
-    height,
-  };
+const handleMouseMove = (ev: MouseEvent) => {
+  const index = mouseCoor.value.dragIndex;
+  if (!!index || index === 0) {
+    let x = ev.pageX - LEFT - mouseCoor.value.x;
+    let y = ev.pageY - TOP - mouseCoor.value.y;
+    dragItems[index].dragFlag = true;
+    dragItems[index].x = Math.min(
+      Math.max(0, x),
+      canvasWidth - dragItems[index].width
+    );
+    dragItems[index].y = Math.min(
+      Math.max(0, y),
+      canvasHeight - dragItems[index].height
+    );
+  }
 };
-// 拖拽结束事件
-const onDragStop = (x: number, y: number, index: number) => {
-  dragItems[index] = {
-    ...dragItems[index],
-    x,
-    y,
-  };
-};
-
-const onRotateStop = (degree: number, index: number) => {
-  dragItems[index] = {
-    ...dragItems[index],
-    rotate: degree,
+// 记录点击的组件信息及鼠标位置
+const handleMouseDown = (ev: MouseEvent, index: number) => {
+  ev.preventDefault();
+  mouseCoor.value = {
+    x: ev.layerX,
+    y: ev.layerY,
+    dragIndex: index,
   };
 };
 
@@ -281,11 +254,18 @@ const handleItemDblClick = (index: number, imgFlag = false) => {
   modalVisible.value = true;
 };
 
-onMounted(() => {});
+onMounted(() => {
+  document.addEventListener("mouseup", () => {
+    dragItems.forEach((item) => {
+      item.dragFlag = false;
+    });
+    mouseCoor.value = { x: 0, y: 0 };
+  });
+});
 </script>
 <style scoped lang="less">
 .agv-edit-page {
-  background-color: #0b0921;
+  background: url(@/assets/img/bg_proc.jpg);
   height: 100%;
   min-width: 1370px;
 }
@@ -309,8 +289,6 @@ onMounted(() => {});
     justify-content: center;
     border: 1px solid #ccc;
     cursor: pointer;
-    background-size: contain !important;
-    background-repeat: no-repeat !important;
 
     img {
       max-width: 80%;
@@ -337,35 +315,12 @@ onMounted(() => {});
   border: 1px solid #ccc;
 
   .drag-item {
+    position: absolute;
     text-align: center;
     user-select: none;
-    background-size: contain !important;
-    background-repeat: no-repeat !important;
-
-    &.active {
-      outline: 1px dashed #ccc;
-    }
-
-    :deep(.handle-rot) {
-      &::before,
-      &::after {
-        border-color: #ccc;
-      }
-      &::after {
-        border-left-color: transparent;
-        border-top-color: transparent;
-      }
-      &::before {
-        border-right-color: transparent;
-      }
-      &.handle {
-        background: transparent;
-      }
-    }
 
     img {
       max-width: 100%;
-      max-height: 100%;
     }
 
     .drag-line {

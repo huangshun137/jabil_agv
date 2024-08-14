@@ -1,4 +1,4 @@
-type ModalContentKey = "width" | "height" | "x" | "y";
+type ModalContentKey = "width" | "height" | "x" | "y" | "rotate";
 
 interface ModalContent {
   label: string;
@@ -11,7 +11,7 @@ interface DragItemTemplate {
   img: string | null;
   width: number;
   height: number;
-  type: string;
+  type: "_svg" | "point" | "line" | "custom";
 }
 
 interface AddItem {
@@ -20,6 +20,7 @@ interface AddItem {
   height: number;
   x: number;
   y: number;
+  rotate: number;
   img?: string | null;
   type?: string;
 }

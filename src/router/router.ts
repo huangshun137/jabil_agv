@@ -22,6 +22,11 @@ const routes: Array<RouteRecordRaw> = [
     name: "AGVPreview",
     component: () => import("@/views/agvPreview/index.vue"),
   },
+  {
+    path: "/grid-demo",
+    name: "GridDemo",
+    component: () => import("@/views/gridDemo.vue"),
+  },
   // {
   //   path: "/about",
   //   name: "About",

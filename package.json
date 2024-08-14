@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gausszhou/vue3-drag-resize-rotate": "^3.0.2",
     "@kjgl77/datav-vue3": "^1.7.3",
     "axios": "^1.7.2",
     "element-plus": "^2.7.8",
