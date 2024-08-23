@@ -27,6 +27,11 @@ const routes: Array<RouteRecordRaw> = [
     name: "GridDemo",
     component: () => import("@/views/gridDemo.vue"),
   },
+  {
+    path: "/modbus-debug",
+    name: "ModbusDebug",
+    component: () => import("@/views/modbusDebug.vue"),
+  },
   // {
   //   path: "/about",
   //   name: "About",

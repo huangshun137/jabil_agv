@@ -13,6 +13,7 @@
     "@kjgl77/datav-vue3": "^1.7.3",
     "axios": "^1.7.2",
     "element-plus": "^2.7.8",
+    "eventemitter3": "^5.0.1",
     "lodash-es": "^4.17.21",
     "mqtt": "^5.9.1",
     "pinia": "^2.2.0",
