@@ -1,8 +1,5 @@
 <template>
   <div class="agv-preview-page">
-    <div style="font-size: 0; text-align: center">
-      <img src="@/assets/img/top.jpg" style="height: 80px; min-width: 90%" />
-    </div>
     <div class="agv-map-canvas">
       <canvas height="513" width="1160" ref="canvas"></canvas>
       <el-popover
@@ -347,7 +344,6 @@ watch(
 <style scoped>
 .agv-preview-page {
   height: 100%;
-  background: url(@/assets/img/bg_proc.jpg);
   min-width: 1180px;
 }
 .agv-preview-page::before {

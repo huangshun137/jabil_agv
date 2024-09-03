@@ -32,6 +32,11 @@ const routes: Array<RouteRecordRaw> = [
     name: "ModbusDebug",
     component: () => import("@/views/modbusDebug.vue"),
   },
+  {
+    path: "/agv",
+    name: "AGVPage",
+    component: () => import("@/views/agv/index.vue"),
+  },
   // {
   //   path: "/about",
   //   name: "About",

@@ -5,15 +5,22 @@ import {
   getApiWithoutLoading,
 } from "./http";
 
+const baseURL = import.meta.env.VITE_APP_BASE_API;
 const testApi = (data: any) => postApi("/test", data);
 
-const getModbusStatusApi = () => getApi("/modbus/status");
-const getAllModbusStatus = () => getApi("/modbus/getAllStatus");
-const getModbusValueApi = (data: any) => getApi("/modbus/getModbusValue", data);
+// modbusDebug api
+const getModbusStatusApi = () => getApi(baseURL + "/modbus/status");
+const getAllModbusStatus = () => getApi(baseURL + "/modbus/getAllStatus");
+const getModbusValueApi = (data: any) =>
+  getApi(baseURL + "/modbus/getModbusValue", data);
 
 const setModbusValueApi = (data: any) =>
-  postApi("/modbus/setModbusValue", data);
-const modbusReconnected = () => postApi("/modbus/reconnected", {});
+  postApi(baseURL + "/modbus/setModbusValue", data);
+const modbusReconnected = () => postApi(baseURL + "/modbus/reconnected", {});
+
+// AgvTaskStatistic
+const getTaskStatisticApi = () =>
+  getApiWithoutLoading(baseURL + "/task/getCountByFinish");
 
 export {
   testApi,
@@ -22,4 +29,5 @@ export {
   getModbusValueApi,
   setModbusValueApi,
   modbusReconnected,
+  getTaskStatisticApi,
 };
