@@ -59,4 +59,40 @@ const formatTime = (time: string | number | Date, fmt: string): string => {
   return fmt;
 };
 
-export { requestQueue, formatTime };
+// 将Blob转换为图片URL
+const blobToImageUrl = (blob: Blob | MediaSource): string => {
+  return window.URL.createObjectURL(blob);
+};
+
+/**
+ * hex转rgb
+ * @param {string} str  色值，如：#409EFF
+ * @returns rgb(64, 158, 255)
+ */
+function hexToRgb(hex: string): string {
+  // 移除可能存在的 '#' 符号
+  const cleanHex = hex.replace("#", "");
+
+  // 检查输入是否有效
+  if (cleanHex.length !== 6) {
+    throw new Error("Invalid hex color format. Expected 6 characters.");
+  }
+
+  // 将每部分转换为十进制数
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// 提取数字
+function extractNumber(str: string): number | null {
+  const matchResult = str.match(/\d+/);
+  if (matchResult) {
+    return parseInt(matchResult[0], 10);
+  }
+  return null;
+}
+
+export { requestQueue, formatTime, blobToImageUrl, hexToRgb, extractNumber };

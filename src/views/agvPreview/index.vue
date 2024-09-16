@@ -344,7 +344,6 @@ watch(
 <style scoped>
 .agv-preview-page {
   height: 100%;
-  min-width: 1180px;
 }
 .agv-preview-page::before {
   content: " ";

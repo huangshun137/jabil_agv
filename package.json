@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
     "@gausszhou/vue3-drag-resize-rotate": "^3.0.2",
     "@kjgl77/datav-vue3": "^1.7.3",
     "axios": "^1.7.2",
@@ -19,7 +20,8 @@
     "mqtt": "^5.9.1",
     "pinia": "^2.2.0",
     "vue": "^3.4.31",
-    "vue-router": "^4.4.0"
+    "vue-router": "^4.4.0",
+    "vue3-colorpicker": "^2.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.12",
@@ -27,6 +29,7 @@
     "less": "^4.2.0",
     "typescript": "^5.2.2",
     "unplugin-auto-import": "^0.18.2",
+    "unplugin-icons": "^0.19.3",
     "unplugin-vue-components": "^0.27.3",
     "vite": "^5.3.4",
     "vite-plugin-mock": "^3.0.2",

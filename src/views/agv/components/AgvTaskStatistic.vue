@@ -12,7 +12,7 @@
           </span>
           <div class="d-flex ml-1 ai-center">
             <span style="font-size: 18px; color: white">任务统计</span>
-            <decoration-3 class="dv-dec-3" />
+            <Decoration3 class="dv-dec-3" />
           </div>
         </div>
         <div class="d-flex jc-center">
@@ -133,7 +133,7 @@ let interval: NodeJS.Timeout | null = null;
 let chart: echarts.ECharts;
 const chartRef = ref();
 const getTaskStatistic = () => {
-  getTaskStatisticApi().then((res) => {
+  getTaskStatisticApi().then((res: any) => {
     numberData.forEach((item) => {
       item.config.number = [res.data[item.key]];
     });

@@ -1,243 +1,141 @@
 <template>
   <div class="agv-edit-page">
-    <div style="font-size: 0; text-align: center">
-      <img src="@/assets/img/top.jpg" style="height: 80px; min-width: 90%" />
-    </div>
+    <AgvTitle title="可视化编辑平台" />
     <div class="drag-page">
-      <div class="drag-add-content">
-        <div
-          class="drag-add-item"
-          v-for="(item, index) in dragItemTemplates"
-          :key="item.name"
-          :style="{
-            background:
-              item.type === 'custom' && item.img ? `url(${item.img})` : 'unset',
-          }"
-          @click="handleItemClick(index)"
-        >
-          <svg-icon
-            :name="'icon-' + item.img"
-            :size="100"
-            color="#1296DB"
-            v-if="item.type === '_svg'"
-          ></svg-icon>
-          <div
-            v-else-if="item.type === 'line'"
-            class="drag-template-line"
-          ></div>
-          <div
-            v-else-if="item.type === 'point'"
-            class="drag-template-point"
-          ></div>
+      <DragTemplate
+        :mapInfo="mapInfo"
+        :modalInfoRef="modalInfoRef"
+        ref="dragTemplateRef"
+      />
+      <div class="map-area">
+        <MapBtn
+          :mapInfo="mapInfo"
+          :mapContainerRef="mapContainerRef"
+          :canvasWidth="canvasWidth"
+          :canvasHeight="canvasHeight"
+          :scale="scale"
+          :handleSave="handleSave"
+          :handlePreview="handlePreview"
+          @updateMapInfo="updateMapInfo"
+          @updateSizeInfo="updateSizeInfo"
+          @updatePointList="updatePointList"
+          @updateLineList="updateLineList"
+        />
+        <div class="map-content" ref="mapContainerRef">
+          <MapContent
+            :mapInfo="mapInfo"
+            :canvasWidth="canvasWidth"
+            :canvasHeight="canvasHeight"
+            :pointList="pointList"
+            :lineList="lineList"
+            :dragItems="dragItems"
+            :onResize="onMapItemResize"
+            :onDrag="onDrag"
+            :onDragStop="onDragStop"
+            :onRotateStop="onRotateStop"
+            :handleItemDblClick="handleItemDblClick"
+            ref="mapContentRef"
+          />
         </div>
-      </div>
-      <div
-        class="drag-content"
-        :style="{
-          width: canvasWidth + 'px',
-          height: canvasHeight + 'px',
-        }"
-      >
-        <VueDragResizeRotate
-          v-for="(item, index) in dragItems"
-          :key="item.id"
-          :parent="true"
-          :x="item.x"
-          :y="item.y"
-          :w="item.width"
-          :h="item.height"
-          :rotatable="true"
-          class-name="drag-item"
-          :style="{
-            background:
-              item.type === 'custom' && item.img ? `url(${item.img})` : 'unset',
-          }"
-          @resizing="
-            (x: number, y: number, width: number, height: number) =>
-              onResize(x, y, width, height, index)
-          "
-          @dragstop="(x: number, y: number) => onDragStop(x, y, index)"
-          @rotatestop="(degree: number) => onRotateStop(degree, index)"
-          @dblclick="handleItemDblClick(index)"
-        >
-          <svg-icon
-            :name="'icon-' + item.img"
-            :size="Math.min(item.width, item.height)"
-            color="#1296DB"
-            v-if="item.type === '_svg'"
-          ></svg-icon>
-          <div v-else-if="item.type === 'line'" class="drag-line"></div>
-          <div
-            v-else-if="item.type === 'point'"
-            class="drag-point"
-            :style="{ borderRadius: item.width / 2 + 'px' }"
-          ></div>
-
-          <div v-if="item.dragFlag" class="drag-info">
-            <p>x: {{ item.x }}</p>
-            <p>y: {{ item.y }}</p>
-          </div>
-        </VueDragResizeRotate>
       </div>
     </div>
-    <el-dialog
-      title="请填写必要参数"
-      v-model="modalVisible"
-      width="500px"
-      @closed="() => editItem && (editItem = undefined)"
-    >
-      <p v-for="item in modalContentList" :key="item.key">
-        <span>{{ item.label }}：</span>
-        <template v-if="editItem">
-          <el-input
-            type="number"
-            :min="0"
-            v-model="editItem[item.key]"
-            @input="validateInput(item.key)"
-            style="margin-bottom: 10px"
-          />
-        </template>
-        <template v-else>
-          <el-input
-            type="number"
-            :min="0"
-            v-model="addItem[item.key]"
-            @input="validateInput(item.key)"
-            style="margin-bottom: 10px"
-          />
-        </template>
-      </p>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="handleModalClose">取消</el-button>
-          <el-button type="danger" @click="handleDelete" v-if="editItem">
-            删除
-          </el-button>
-          <el-button type="primary" @click="handleConfrimAdd">确定</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <modal-info
+      ref="modalInfoRef"
+      :canvasWidth="canvasWidth"
+      :canvasHeight="canvasHeight"
+      :mapId="id"
+      @handleDelete="handleDelete"
+      @handleConfrimAdd="handleConfrimAdd"
+      @handleConfrimIconCreate="handleConfrimIconCreate"
+    />
+    <modal-preview
+      :mapInfo="mapInfo"
+      :pointList="pointList"
+      :lineList="lineList"
+      ref="modalPreviewRef"
+    />
   </div>
 </template>
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
+import { omit } from "lodash-es";
+import AgvTitle from "@/components/AgvTitle.vue";
+import ModalInfo from "./components/ModalInfo.vue";
+import DragTemplate from "./components/DragTemplate.vue";
+import MapBtn from "./components/MapBtn.vue";
+import MapContent from "./components/MapContent.vue";
+import ModalPreview from "./components/ModalPreview.vue";
 import {
   AddItem,
   DragItem,
-  DragItemTemplate,
   EditItem,
-  ModalContent,
-  ModalContentKey,
+  LineInfo,
+  MapInfo,
+  PointInfo,
+  SizeInfo,
 } from ".";
-import { omit } from "lodash-es";
+import { getMapInfoApi } from "@/api/api";
 
-const canvasWidth = 1000;
-const canvasHeight = 533;
-// const LEFT = 330; // 画布距左边的像素
-// const TOP = 80; // 画布距上边的像素
-const modalContentList: ModalContent[] = [
-  { label: "宽度", key: "width" },
-  { label: "高度", key: "height" },
-  { label: "X轴坐标", key: "x" },
-  { label: "Y轴坐标", key: "y" },
-  { label: "旋转角度", key: "rotate" },
-];
-const dragItemTemplates = reactive<DragItemTemplate[]>([
-  {
-    name: "机台",
-    img: "machine",
-    width: 113,
-    height: 134,
-    type: "_svg",
-  },
-  {
-    name: "充电房",
-    img: "charge-room",
-    width: 190,
-    height: 134,
-    type: "_svg",
-  },
-  {
-    name: "车",
-    img: "agv",
-    width: 42,
-    height: 39,
-    type: "_svg",
-  },
-  {
-    name: "线",
-    img: null,
-    width: 506,
-    height: 3,
-    type: "line",
-  },
-  {
-    name: "点",
-    img: null,
-    width: 8,
-    height: 8,
-    type: "point",
-  },
-]);
-const modalVisible = ref(false);
-const initAddItem: AddItem = {
-  name: "",
-  width: 200,
-  height: 200,
-  x: 0,
-  y: 0,
-  rotate: 0,
-};
-const addItem = reactive<AddItem>({ ...initAddItem });
+const props = defineProps<{
+  id: number;
+}>();
+const dragTemplateRef = ref(); // 左边拖拽模板组件
+const scale = ref<number>(1); // 地图缩放比例
+const mapInfo = ref<MapInfo>(); // 地图详情信息
+const mapContainerRef = ref(); // 外部容器div
+const mapContentRef = ref(); // 地图拖拽组件
+const modalInfoRef = ref(); // 新增/编辑弹窗组件
+const modalPreviewRef = ref(); // 预览弹窗组件
 const dragItems = reactive<Array<DragItem>>([]);
-const editItem = ref<EditItem>();
+const pointList = reactive<Array<PointInfo>>([]);
+const lineList = reactive<Array<LineInfo>>([]);
 
-const handleItemClick = (index: number) => {
-  modalVisible.value = true;
-  Object.assign(addItem, { ...initAddItem, ...dragItemTemplates[index] });
+const canvasWidth = ref<number>(1000);
+const canvasHeight = ref<number>(533);
+
+const updateMapInfo = (_mapInfo: MapInfo) => {
+  mapInfo.value = {
+    ...mapInfo.value,
+    ..._mapInfo,
+  };
 };
-const validateInput = (flag: ModalContentKey) => {
-  const _item = editItem.value || addItem;
-  if (_item[flag] < 0) {
-    _item[flag] = 0;
-  }
-  if (flag === "width" && _item.width > canvasWidth - _item.x) {
-    _item.width = canvasWidth - _item.x;
-  }
-  if (flag === "height" && _item.height > canvasHeight - _item.y) {
-    _item.height = canvasHeight - _item.y;
-  }
-  if (flag === "x" && _item.x > canvasWidth - _item.width) {
-    _item.x = canvasWidth - _item.width;
-  }
-  if (flag === "y" && _item.y > canvasWidth - _item.height) {
-    _item.y = canvasHeight - _item.height;
+const updateSizeInfo = (sizeInfo: SizeInfo) => {
+  canvasWidth.value = sizeInfo.width;
+  canvasHeight.value = sizeInfo.height;
+  scale.value = sizeInfo.scale;
+};
+const updatePointList = (_pointList: Array<PointInfo>) => {
+  pointList.splice(0, pointList.length, ..._pointList);
+};
+const updateLineList = (_lineList: Array<LineInfo>) => {
+  lineList.splice(0, lineList.length, ..._lineList);
+  if (lineList.length > 0) {
+    mapContentRef.value.drawLines();
   }
 };
-const handleDelete = () => {
-  dragItems.splice(editItem.value!.index, 1);
-  handleModalClose();
+
+const handleDelete = (index: number) => {
+  dragItems.splice(index, 1);
 };
-const handleConfrimAdd = () => {
-  if (editItem.value) {
-    const index = editItem.value.index;
-    dragItems[index] = omit(editItem.value, ["index"]);
-  } else {
+const handleConfrimAdd = (data: AddItem | EditItem, flag: "add" | "edit") => {
+  if (flag === "add") {
     dragItems.push({
-      id: Math.random(),
+      ...(omit(data, ["index"]) as AddItem),
+      iconId: data.id,
       dragFlag: false,
-      ...addItem,
     });
+  } else {
+    const _data = data as EditItem;
+    dragItems[_data.index] = omit(_data, ["index"]);
   }
-  handleModalClose();
 };
-const handleModalClose = () => {
-  modalVisible.value = false;
-  // editItem.value = undefined;
+// 新增图标弹窗确认
+const handleConfrimIconCreate = () => {
+  dragTemplateRef.value.getIconList();
 };
 
 // 缩放事件
-const onResize = (
+const onMapItemResize = (
   x: number,
   y: number,
   width: number,
@@ -252,12 +150,20 @@ const onResize = (
     height,
   };
 };
-// 拖拽结束事件
-const onDragStop = (x: number, y: number, index: number) => {
+// 拖拽中事件
+const onDrag = (x: number, y: number, index: number) => {
   dragItems[index] = {
     ...dragItems[index],
     x,
     y,
+    dragFlag: true,
+  };
+};
+// 拖拽结束事件
+const onDragStop = (index: number) => {
+  dragItems[index] = {
+    ...dragItems[index],
+    dragFlag: false,
   };
 };
 
@@ -268,127 +174,63 @@ const onRotateStop = (degree: number, index: number) => {
   };
 };
 
-const handleItemDblClick = (index: number, imgFlag = false) => {
-  console.log("123123123");
-  let _index = index;
-  if (imgFlag) {
-    _index = dragItems.findIndex((item) => item.id == index);
-  }
-  editItem.value = {
-    index: _index,
-    ...dragItems[_index],
-  };
-  modalVisible.value = true;
+const handleItemDblClick = (index: number) => {
+  modalInfoRef.value.handleEdit({
+    index,
+    ...dragItems[index],
+  });
 };
 
-onMounted(() => {});
+const getMapInfo = () => {
+  getMapInfoApi(props.id).then((res: any) => {
+    console.log(res);
+  });
+};
+
+const handleSave = () => {
+  const params = {
+    ...mapInfo.value,
+    pointList,
+    lineList,
+    dragIconMaps: dragItems.map((item) => ({
+      ...item,
+      id: item.id < 0 ? undefined : item.id,
+    })),
+  };
+  console.log(params);
+};
+const handlePreview = () => {
+  modalPreviewRef.value.showModal();
+};
+
+onMounted(() => {
+  canvasWidth.value = mapContainerRef.value.clientWidth;
+  canvasHeight.value = mapContainerRef.value.clientHeight;
+  getMapInfo();
+});
 </script>
 <style scoped lang="less">
 .agv-edit-page {
-  background-color: #0b0921;
+  background: url(@/assets/img/pageBg.png);
   height: 100%;
   min-width: 1370px;
+  padding: 16px;
 }
 .drag-page {
   display: flex;
-  height: calc(100% - 80px);
+  height: calc(100% - 100px);
+  padding-top: 10px;
 }
-.drag-add-content {
-  width: 300px;
-  height: 800px;
-  border: 1px solid #ccc;
-  padding: 10px;
-  display: grid;
-  grid-template-columns: 130px 130px;
-  grid-template-rows: repeat(auto-fill, 130px);
-  gap: 10px;
 
-  .drag-add-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #ccc;
-    cursor: pointer;
-    background-size: contain !important;
-    background-repeat: no-repeat !important;
-
-    img {
-      max-width: 80%;
-    }
-
-    .drag-template-line {
-      width: 80%;
-      height: 5px;
-      border-radius: 1px;
-      background-color: #1a5cd7;
-    }
-
-    .drag-template-point {
-      width: 10px;
-      height: 10px;
-      border-radius: 5px;
-      background-color: #6ba785;
-    }
-  }
+.map-area {
+  margin-left: 20px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
-.drag-content {
-  margin-left: 30px;
-  position: relative;
-  border: 1px solid #ccc;
-
-  .drag-item {
-    text-align: center;
-    user-select: none;
-    background-size: contain !important;
-    background-repeat: no-repeat !important;
-
-    &.active {
-      outline: 1px dashed #ccc;
-    }
-
-    :deep(.handle-rot) {
-      &::before,
-      &::after {
-        border-color: #ccc;
-      }
-      &::after {
-        border-left-color: transparent;
-        border-top-color: transparent;
-      }
-      &::before {
-        border-right-color: transparent;
-      }
-      &.handle {
-        background: transparent;
-      }
-    }
-
-    img {
-      max-width: 100%;
-      max-height: 100%;
-    }
-
-    .drag-line {
-      border-radius: 1px;
-      background-color: #1a5cd7;
-      width: 100%;
-      height: 100%;
-    }
-    .drag-point {
-      background-color: #6ba785;
-      width: 100%;
-      height: 100%;
-    }
-
-    .drag-info {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.4);
-      color: white;
-    }
-  }
+.map-content {
+  margin-top: 10px;
+  flex: 1;
 }
 </style>

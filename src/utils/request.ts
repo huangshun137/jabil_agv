@@ -19,13 +19,13 @@ const service = axios.create({
 
 const loadingCount = ref<number>(0);
 let downloadLoadingInstance: any = null;
+const requestStore = useRequestStore();
 
 service.interceptors.request.use(
   (config: NewAxiosRequestConfig) => {
     // 将请求存储到pinia中
     const controller = new AbortController();
     config.signal = controller.signal;
-    const requestStore = useRequestStore();
     requestStore.addRequests({
       controller,
       url: config.url!,
@@ -36,9 +36,11 @@ service.interceptors.request.use(
     if (config.isLoading) {
       loadingCount.value++;
     }
+    console.log("loadingCount.value::::", loadingCount.value);
     if (loadingCount.value > 0 && !downloadLoadingInstance) {
       // 默认不显示loading,当config.islLoading为true时显示loading
       downloadLoadingInstance = ElLoading.service({
+        fullscreen: true,
         lock: true,
         text: "加载中",
         background: "rgba(0, 0, 0, 0.7)",
@@ -117,9 +119,7 @@ const loadingColse = () => {
 
 service.interceptors.response.use(
   (res) => {
-    // console.log(res);
-    loadingColse();
-    const requestStore = useRequestStore();
+    (res.config as NewAxiosRequestConfig).isLoading && loadingColse();
     requestStore.deleteRequest(res.config.url!, res.config.method!);
     // 未设置状态码则默认成功状态
     const code = res.data.code || 200;
@@ -186,6 +186,7 @@ service.interceptors.response.use(
     }
     //message为canceled时就是取消当前请求
     if (message != "canceled") {
+      loadingColse();
       ElMessage({
         message: message,
         type: "error",

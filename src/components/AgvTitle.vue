@@ -31,7 +31,7 @@
         <div class="react-left ml-3"></div>
       </div>
       <div class="d-flex aside-width">
-        <div class="react-right mr-3 react-l-s"></div>
+        <div class="react-right mr-3"></div>
         <div class="react-right mr-4 react-l-s">
           <span class="react-after"></span>
           <span class="text">
@@ -84,6 +84,7 @@ onUnmounted(() => {
   width: 100%;
   color: #d3d6dd;
   background-color: transparent;
+  overflow: hidden;
 
   .dv-dec-10,
   .dv-dec-10-s {
@@ -135,13 +136,15 @@ onUnmounted(() => {
   .react-right {
     &.react-l-s {
       text-align: right;
-      width: 500px;
+      width: 62.5%;
     }
     font-size: 18px;
-    width: 300px;
+    width: 37.5%;
+    height: 50px;
     line-height: 50px;
     text-align: center;
     transform: skewX(-45deg);
+    background-color: #0f1325;
 
     .react-after {
       position: absolute;
@@ -149,8 +152,8 @@ onUnmounted(() => {
       top: 0;
       height: 50px;
       width: 50px;
-      background-color: #0f1325;
       transform: skewX(45deg);
+      background-color: #0f1325;
     }
 
     .text {
@@ -164,11 +167,11 @@ onUnmounted(() => {
 
   .react-left {
     &.react-l-s {
-      width: 500px;
+      width: 62.5%;
       text-align: left;
     }
     font-size: 18px;
-    width: 300px;
+    width: 37.5%;
     height: 50px;
     line-height: 50px;
     text-align: center;

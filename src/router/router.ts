@@ -4,8 +4,9 @@ import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 const routes: Array<RouteRecordRaw> = [
   {
     path: "/",
-    name: "Home",
-    component: () => import("@/views/home.vue"),
+    redirect: "/agv-list",
+    // name: "Home",
+    // component: () => import("@/views/home.vue"),
   },
   {
     path: "/storeTest",
@@ -13,9 +14,10 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("@/views/storeTest.vue"),
   },
   {
-    path: "/agv-edit",
+    path: "/agv-edit/:id",
     name: "AGVEdit",
     component: () => import("@/views/agvEdit/index.vue"),
+    props: true,
   },
   {
     path: "/agv-preview",
@@ -36,6 +38,11 @@ const routes: Array<RouteRecordRaw> = [
     path: "/agv",
     name: "AGVPage",
     component: () => import("@/views/agv/index.vue"),
+  },
+  {
+    path: "/agv-list",
+    name: "AGVList",
+    component: () => import("@/views/agvList/index.vue"),
   },
   // {
   //   path: "/about",

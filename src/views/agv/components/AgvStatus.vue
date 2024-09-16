@@ -14,14 +14,12 @@
             <span style="font-size: 18px; color: white">AGV状态</span>
           </div>
         </div>
-        <div class="mt-3 p-3">
-          AGV 1#状态：{{ messages[0]?.msg?.curStatus }}
-        </div>
+        <div class="mt-3 p-3">AGV 1#状态：{{ statusInfo.status }}</div>
         <div class="water px-2">
           <water-level-pond
             class="dv-wa-le-po"
             :config="{
-              data: [messages[0]?.msg?.powerValue || 0],
+              data: [statusInfo.battery || 0],
               shape: 'roundRect',
               formatter: '{value}%',
               waveNum: 3,
@@ -33,19 +31,42 @@
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from "vue";
+import { onMounted, onUnmounted, reactive, watch } from "vue";
 import { WaterLevelPond, BorderBox13 } from "@kjgl77/datav-vue3";
 import useMqtt from "@/utils/useMqtt";
 
 const { initMqtt, isConnected, messages, subscribeToTopic, disconnect } =
   useMqtt();
 
+const statusInfo = reactive({
+  battery: 0,
+  status: "",
+});
 // MQTT连接后订阅消息
 watch(
   () => isConnected.value,
   (newValue) => {
     if (newValue) {
-      subscribeToTopic("/layout/robot/76");
+      subscribeToTopic("/layout/robot_status/76");
+      subscribeToTopic("/robot/power/76");
+    }
+  }
+);
+watch(
+  () => messages.value,
+  (messages) => {
+    if (messages.length === 0) return;
+    const powerMsg = messages.find(
+      (msg) => msg.topic === "/robot/power/76"
+    )?.msg;
+    if (powerMsg) {
+      statusInfo.battery = powerMsg.battery_value;
+    }
+    const stateMsg = messages.find(
+      (msg) => msg.topic === "/layout/robot_status/76"
+    )?.msg;
+    if (stateMsg) {
+      statusInfo.status = stateMsg.curStatus;
     }
   }
 );

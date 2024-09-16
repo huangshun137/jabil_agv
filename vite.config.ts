@@ -5,6 +5,8 @@ import path from "path";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
+import IconsResolver from "unplugin-icons/resolver";
+import Icons from "unplugin-icons/vite";
 
 import { viteMockServe } from "vite-plugin-mock";
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
@@ -16,10 +18,25 @@ export default defineConfig(({ command }) => {
       vue(),
       viteMockServe(),
       AutoImport({
-        resolvers: [ElementPlusResolver()],
+        resolvers: [
+          ElementPlusResolver(),
+          // 自动导入图标组件
+          IconsResolver({
+            prefix: "Icon",
+          }),
+        ],
       }),
       Components({
-        resolvers: [ElementPlusResolver()],
+        resolvers: [
+          // 自动注册图标组件
+          IconsResolver({
+            enabledCollections: ["ep"],
+          }),
+          ElementPlusResolver(),
+        ],
+      }),
+      Icons({
+        autoInstall: true,
       }),
       createSvgIconsPlugin({
         // 指定要缓存.svg文件的文件夹
@@ -36,7 +53,7 @@ export default defineConfig(({ command }) => {
     server: {
       proxy: {
         "/api": {
-          target: "http://192.168.128.14:8081",
+          target: "http://192.168.177.14:8081",
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ""),
         },
