@@ -7,7 +7,7 @@
       :show-file-list="false"
       :before-upload="beforeMapUpload"
       :on-success="onMapUploadSuccess"
-      v-if="!mapInfo"
+      v-if="!mapInfo?.url"
     >
       <el-button type="primary">上传地图</el-button>
       <template #tip>
@@ -41,6 +41,7 @@
       <el-button type="primary" class="float-r mr-2" @click="handlePreview"
         >预览</el-button
       >
+      <el-button class="float-r" @click="handleBack">返回</el-button>
     </template>
   </div>
 </template>
@@ -58,6 +59,7 @@ const props = defineProps<{
   scale: number;
   handleSave: () => void;
   handlePreview: () => void;
+  handleBack: () => void;
 }>();
 const emit = defineEmits<{
   (e: "updateMapInfo", mapInfo: MapInfo): void;
@@ -90,6 +92,7 @@ const onMapUploadSuccess = (response: any) => {
     show: true,
     width: 0,
     height: 0,
+    scale: 1,
   };
 
   nextTick(() => {
@@ -114,14 +117,12 @@ const onMapUploadSuccess = (response: any) => {
       _canvasWidth = mapInfo.width;
       _canvasHeight = mapInfo.height;
 
-      let scale = mapInfo.width / _img.width;
-      console.log("scale.value:::", scale);
+      mapInfo.scale = mapInfo.width / _img.width;
 
       emit("updateMapInfo", mapInfo);
       emit("updateSizeInfo", {
         width: _canvasWidth,
         height: _canvasHeight,
-        scale,
       });
     };
   });
@@ -134,8 +135,8 @@ const handleMapShow = (flag: boolean) => {
 };
 // 地图坐标转换
 const mapCoorChange = (pos: number, extraPX = 0) => {
-  const _pos = pos * pxToMeterRate * props.scale;
-  return _pos + extraPX;
+  const _pos = pos * pxToMeterRate * props.scale * props.mapInfo.scale;
+  return _pos + extraPX * props.scale;
 };
 // 设置地图点位路线信息
 const handleMapJSONUpload = (uploadFile: UploadFile) => {

@@ -83,7 +83,7 @@ watch(
         `fill="${newColor}"`
       );
       svgContent.value = svgContent.value.replace(
-        new RegExp(`width="${oldSize}" height="${oldSize}"`, "g"),
+        new RegExp(`width="${oldSize}"(\\s+)height="${oldSize}"`, "g"),
         `width="${newSize}" height="${newSize}"`
       );
     }

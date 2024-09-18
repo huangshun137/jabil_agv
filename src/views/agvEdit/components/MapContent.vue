@@ -37,15 +37,12 @@
       :parent="true"
       :x="item.x"
       :y="item.y"
-      :w="item.width + ''"
-      :h="item.height + ''"
+      :w="item.width"
+      :h="item.height"
       :rotatable="true"
       :r="item.rotate"
       class-name="drag-item"
-      :style="{
-        background:
-          item.type === 'custom' && item.img ? `url(${item.img})` : 'unset',
-      }"
+      :lock-aspect-ratio="item.type === 'point'"
       @resizing="
         (x: number, y: number, width: number, height: number) =>
           onResize(x, y, width, height, index)
@@ -56,10 +53,10 @@
       @dblclick="handleItemDblClick(index)"
     >
       <SvgIconRemote
-        :svgUrl="item.img!"
+        :svgUrl="item.url!"
         :size="Math.min(item.width, item.height)"
         :color="item.color"
-        v-if="item.type === '_svg'"
+        v-if="item.type === '_svg' || item.type === 'car'"
       />
       <div
         v-else-if="item.type === 'line'"

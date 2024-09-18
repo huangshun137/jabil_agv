@@ -8,6 +8,7 @@
     :show-close="false"
     class="info-modal"
   >
+    <!-- 新增图标弹窗 -->
     <el-form
       ref="ruleFormRef"
       :model="addRuleForm"
@@ -71,6 +72,7 @@
         </template>
       </el-form-item>
     </el-form>
+    <!-- 添加/编辑图标弹窗 -->
     <el-form
       ref="ruleFormRef"
       :model="ruleForm"
@@ -91,6 +93,25 @@
         <template v-else-if="item.key === 'text'">
           <el-input v-model="ruleForm.text" />
         </template>
+        <template v-else-if="item.key === 'robotId'">
+          <el-select
+            v-model="ruleForm.robotId"
+            placeholder="请选择绑定机器人"
+            :disabled="modalType === 'edit'"
+          >
+            <el-option
+              v-for="item in robotList"
+              :key="item.robotName + item.robotId"
+              :label="item.robotName"
+              :value="item.robotId"
+              :disabled="
+                dragItems.some(
+                  (i) => i.type === 'car' && i.robotId === item.robotId
+                )
+              "
+            />
+          </el-select>
+        </template>
         <template v-else>
           <el-input-number
             v-model="ruleForm[item.key]"
@@ -105,8 +126,10 @@
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="handleModalClose">取消</el-button>
+        <el-button type="danger" @click="handleDelete" v-if="!addFlag">
+          {{ modalType === "edit" ? "删除" : "删除此模板图标" }}
+        </el-button>
         <template v-if="modalType === 'edit'">
-          <el-button type="danger" @click="handleDelete"> 删除 </el-button>
           <el-button type="primary" @click="handleCopy"> 复制 </el-button>
         </template>
         <el-button type="primary" @click="handleConfirm">确定</el-button>
@@ -120,6 +143,7 @@ import {
   AddIconItem,
   AddIconModalContent,
   AddItem,
+  DragItem,
   EditItem,
   ModalContent,
   ModalContentKey,
@@ -132,7 +156,7 @@ import {
 } from "element-plus";
 import { nextTick } from "process";
 import { omit } from "lodash-es";
-import { createIconApi, imgUploadUrl } from "@/api/api";
+import { createIconApi, deleteIconApi, imgUploadUrl } from "@/api/api";
 
 const baseImgUrl = import.meta.env.VITE_APP_IMG_BASE_URL;
 const modalContentList: ModalContent[] = [
@@ -159,11 +183,13 @@ const props = defineProps<{
   canvasWidth: number;
   canvasHeight: number;
   mapId: number;
+  robotList: any[];
+  dragItems: DragItem[];
 }>();
 const emit = defineEmits<{
   (e: "handleModalClose"): void;
   (e: "handleDelete", index: number): void;
-  (e: "handleConfrimIconCreate"): void;
+  (e: "handleRefreshIconList"): void;
   (
     e: "handleConfrimAdd",
     formData: AddItem | EditItem,
@@ -175,7 +201,7 @@ const modalVisible = ref<boolean>(false);
 const modalType = ref<"add" | "edit">("add");
 const ruleFormRef = ref<FormInstance>();
 const record = ref<AddItem | EditItem>();
-const ruleForm = reactive<Omit<AddItem | EditItem, "id">>({
+const ruleForm = reactive<AddItem | EditItem>({
   name: "",
   width: 0,
   height: 0,
@@ -183,7 +209,7 @@ const ruleForm = reactive<Omit<AddItem | EditItem, "id">>({
   y: 0,
   rotate: 0,
   color: "",
-});
+} as AddItem);
 const addRuleForm = reactive<AddIconItem>({
   name: "",
   width: 50,
@@ -200,6 +226,7 @@ const rules = reactive<FormRules<AddItem>>({
   rotate: [{ required: true, message: "请输入旋转角度", trigger: "blur" }],
   text: [{ required: true, message: "请输入文字", trigger: "blur" }],
   fontSize: [{ required: true, message: "请输入字体大小", trigger: "blur" }],
+  robotId: [{ required: true, message: "请选择绑定小车" }],
 });
 const addRules = reactive<FormRules<AddIconItem>>({
   name: [{ required: true, message: "请输入名称", trigger: "blur" }],
@@ -212,6 +239,11 @@ const addFlag = ref<boolean>(false);
 const formItems = computed(() => {
   if (ruleForm.type === "text") {
     return [...modalContentList, ...modalContentTextList];
+  } else if (ruleForm.type === "car") {
+    return [
+      ...modalContentList,
+      { label: "绑定小车", key: "robotId" } as ModalContent,
+    ];
   } else {
     return modalContentList;
   }
@@ -307,8 +339,26 @@ const handleDelete = () => {
     cancelButtonText: "取消",
     type: "warning",
   }).then(() => {
-    emit("handleDelete", (ruleForm as EditItem).index);
-    handleModalClose();
+    if (modalType.value === "edit") {
+      emit("handleDelete", (ruleForm as EditItem).index);
+      handleModalClose();
+    } else {
+      deleteIconApi({ id: ruleForm.id }).then((res: any) => {
+        if (res.code !== 200) {
+          ElMessage({
+            type: "warning",
+            message: res.message,
+          });
+        } else {
+          ElMessage({
+            type: "success",
+            message: res.message,
+          });
+          emit("handleRefreshIconList");
+          handleModalClose();
+        }
+      });
+    }
   });
 };
 const handleCopy = () => {
@@ -339,7 +389,7 @@ const handleConfirm = () => {
           ...addRuleForm,
           id: undefined,
           isInit: 0,
-          mapId: addRuleForm.isCommon ? 0 : props.mapId, // todo 需要父组件传mapId过来
+          mapId: addRuleForm.isCommon ? 0 : props.mapId,
           type: "_svg",
         };
         createIconApi(params).then((res: any) => {
@@ -349,7 +399,7 @@ const handleConfirm = () => {
             return;
           }
           ElMessage.success("添加成功");
-          emit("handleConfrimIconCreate");
+          emit("handleRefreshIconList");
           handleModalClose();
         });
       } else {

@@ -1,40 +1,48 @@
 <template>
   <div class="drag-add-content">
-    <div
-      class="drag-add-item"
-      v-for="(item, index) in dragItemTemplates"
-      :key="item.name"
-      :style="{
-        background:
-          item.type === 'custom' && item.img ? `url(${item.img})` : 'unset',
-      }"
-      @click="handleItemClick(index)"
-    >
-      <SvgIconRemote
-        :svgUrl="item.img!"
-        :size="100"
-        :color="item.color || '#1296DB'"
-        v-if="item.type === '_svg'"
-      />
-      <div v-else-if="item.type === 'line'" class="drag-template-line"></div>
-      <div v-else-if="item.type === 'point'" class="drag-template-point"></div>
-      <div v-else-if="item.type === 'text'" class="drag-template-text">
-        文字
+    <el-scrollbar>
+      <div class="drag-add-container">
+        <div
+          class="drag-add-item"
+          v-for="(item, index) in dragItemTemplates"
+          :key="item.name"
+          @click="handleItemClick(index)"
+        >
+          <SvgIconRemote
+            :svgUrl="item.url!"
+            :size="100"
+            :color="item.color || '#1296DB'"
+            v-if="item.type === '_svg' || item.type === 'car'"
+          />
+          <div
+            v-else-if="item.type === 'line'"
+            class="drag-template-line"
+          ></div>
+          <div
+            v-else-if="item.type === 'point'"
+            class="drag-template-point"
+          ></div>
+          <div v-else-if="item.type === 'text'" class="drag-template-text">
+            文字
+          </div>
+        </div>
+        <div class="drag-add-item" @click="handleAddItemClick">
+          <el-icon size="50" color="#fff"><Plus /></el-icon>
+        </div>
       </div>
-    </div>
-    <div class="drag-add-item" @click="handleAddItemClick">
-      <el-icon size="50" color="#fff"><Plus /></el-icon>
-    </div>
+    </el-scrollbar>
   </div>
 </template>
 <script lang="ts" setup>
 import { onMounted, reactive } from "vue";
-import { AddItem, DragItemTemplate } from "..";
+import { AddItem, DragItem, DragItemTemplate } from "..";
 import { queryIconList } from "@/api/api";
 
 const props = defineProps<{
   mapInfo: any;
   modalInfoRef: any;
+  dragItems: DragItem[];
+  robotsLength: number;
 }>();
 
 const dragItemTemplates = reactive<DragItemTemplate[]>([]);
@@ -66,9 +74,9 @@ const getIconList = () => {
       ...res.data.map((item: any) => ({
         id: item.id,
         name: item.name,
-        img: item.url,
-        width: item.width,
-        height: item.height,
+        url: item.url,
+        width: parseFloat(item.width),
+        height: parseFloat(item.height),
         color: item.color,
         type: item.type,
       }))
@@ -77,16 +85,29 @@ const getIconList = () => {
 };
 // 点击图标 新建图标
 const handleItemClick = (index: number) => {
-  if (!props.mapInfo) {
+  if (!props.mapInfo?.url) {
     ElMessage({
       type: "warning",
       message: "请先上传地图!",
     });
     return;
   }
+  const dragTemplateItem = dragItemTemplates[index];
+  if (dragTemplateItem.type === "car") {
+    const carItemsLength = props.dragItems.filter(
+      (item) => item.type === "car"
+    ).length;
+    if (carItemsLength === props.robotsLength) {
+      ElMessage({
+        type: "warning",
+        message: "已添加所有车辆，请先删除车辆后再添加",
+      });
+      return;
+    }
+  }
   props.modalInfoRef.handleAdd({
     ...initAddItem,
-    ...dragItemTemplates[index],
+    ...dragTemplateItem,
   });
 };
 const handleAddItemClick = () => {
@@ -105,16 +126,19 @@ onMounted(() => {
 </script>
 <style lang="less" scoped>
 .drag-add-content {
-  width: 300px;
   height: 100%;
   border: 1px solid #ccc;
-  padding: 10px;
-  display: grid;
-  grid-template-columns: 130px 130px;
-  grid-template-rows: repeat(auto-fill, 130px);
-  gap: 10px;
+  .drag-add-container {
+    width: 290px;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+  }
 
   .drag-add-item {
+    width: 130px;
+    height: 130px;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -122,6 +146,10 @@ onMounted(() => {
     cursor: pointer;
     background-size: contain !important;
     background-repeat: no-repeat !important;
+
+    &:nth-child(odd) {
+      margin-right: 10px;
+    }
 
     img {
       max-width: 80%;

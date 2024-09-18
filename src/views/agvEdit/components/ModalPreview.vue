@@ -1,9 +1,21 @@
 <template>
   <div class="preview-modal">
-    <el-dialog title="地图预览" :model-value="modalVisible" width="80%">
+    <el-dialog
+      title="地图预览"
+      v-model="modalVisible"
+      width="80%"
+      destroy-on-close
+    >
       <div class="preview-container" ref="containerRef">
         <div class="preview-content" ref="appRef">
-          <AgvPreview ref="previewRef"></AgvPreview>
+          <AgvPreview
+            ref="previewRef"
+            :width="width"
+            :height="height"
+            :pointList="pointList"
+            :lineList="lineList"
+            :dragItemList="dragItemList"
+          />
         </div>
       </div>
     </el-dialog>
@@ -13,20 +25,19 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import AgvPreview from "@/views/agvPreview/index.vue";
 import useDraw from "@/utils/useDraw";
-import { LineInfo, MapInfo, PointInfo } from "..";
+import { DragItem, LineInfo, PointInfo } from "..";
 import { nextTick } from "process";
 
 const props = defineProps<{
-  mapInfo?: MapInfo;
+  width?: number;
+  height?: number;
   pointList: PointInfo[];
   lineList: LineInfo[];
+  dragItemList: DragItem[];
 }>();
 
 // * 适配处理
-const { appRef, calcRate, windowDraw, unWindowDraw } = useDraw(
-  props.mapInfo?.width,
-  props.mapInfo?.height
-);
+const { appRef, calcRate, windowDraw, unWindowDraw } = useDraw();
 
 const modalVisible = ref<boolean>(false);
 const containerRef = ref<HTMLElement>();
@@ -34,8 +45,7 @@ const containerRef = ref<HTMLElement>();
 const showModal = () => {
   modalVisible.value = true;
   nextTick(() => {
-    // todo 可能width，height也要传
-    calcRate(containerRef.value);
+    calcRate(containerRef.value, props.width, props.height);
   });
 };
 
@@ -56,6 +66,18 @@ defineExpose({
   :deep(.el-dialog) {
     height: 80vh;
     margin-top: 10vh;
+  }
+  :deep(.el-dialog__body),
+  .preview-container {
+    width: 100%;
+    height: 100%;
+  }
+  .preview-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transform-origin: left top;
   }
 }
 </style>

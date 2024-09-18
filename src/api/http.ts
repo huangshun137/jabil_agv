@@ -34,4 +34,28 @@ const getApiWithoutLoading = (
     ...config,
   } as CustomAxiosRequestConfig);
 
-export { postApi, postApiWithoutLoading, getApi, getApiWithoutLoading };
+const deleteApi = (url: string, params: any = {}, config = {}): any =>
+  service.delete(url, {
+    params,
+    isLoading: true,
+    ...config,
+  } as CustomAxiosRequestConfig);
+const deleteApiWithoutLoading = (
+  url: string,
+  params: any = {},
+  config = {}
+): any =>
+  service.delete(url, {
+    params,
+    isLoading: false,
+    ...config,
+  } as CustomAxiosRequestConfig);
+
+export {
+  postApi,
+  postApiWithoutLoading,
+  getApi,
+  getApiWithoutLoading,
+  deleteApi,
+  deleteApiWithoutLoading,
+};

@@ -6,7 +6,8 @@ type ModalContentKey =
   | "rotate"
   | "color"
   | "text"
-  | "fontSize";
+  | "fontSize"
+  | "robotId";
 
 interface ModalContent {
   label: string;
@@ -17,11 +18,11 @@ interface ModalContent {
 interface DragItemTemplate {
   id: number;
   name: string;
-  img: string | null;
+  url: string | null;
   width: number;
   height: number;
   color?: string;
-  type: "_svg" | "point" | "line" | "custom" | "text";
+  type: "_svg" | "point" | "line" | "custom" | "text" | "car";
 }
 
 interface AddItem {
@@ -33,10 +34,11 @@ interface AddItem {
   y: number;
   rotate: number;
   color: string;
-  img?: string | null;
+  url?: string | null;
   type?: string;
   text?: string;
   fontSize?: number;
+  robotId?: number;
 }
 
 interface DragItem extends AddItem {
@@ -81,6 +83,7 @@ interface MapInfo {
   show: boolean;
   width: number;
   height: number;
+  scale: number;
 }
 
 // 地图点位信息
@@ -103,7 +106,6 @@ interface LineInfo {
 interface SizeInfo {
   width: number;
   height: number;
-  scale: number;
 }
 
 export {

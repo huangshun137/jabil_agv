@@ -33,13 +33,14 @@
             >
               <el-option
                 v-for="item in robotList"
-                :label="item.label"
-                :value="item.value.robotId"
-                :key="item.value.robotId + item.label"
+                :label="item.robotName"
+                :value="item.robotId"
+                :key="item.robotId + item.robotName"
               />
             </el-select>
           </el-form-item>
           <el-form-item>
+            <el-button @click="handleReset">重置</el-button>
             <el-button type="primary" @click="handleSearch">查询</el-button>
           </el-form-item>
         </el-form>
@@ -55,7 +56,7 @@
         >
           <el-table-column type="index" />
           <el-table-column prop="name" label="名称" width="180" />
-          <el-table-column prop="typeId" label="所属实验室" width="180" />
+          <el-table-column prop="typeName" label="所属实验室" width="180" />
           <el-table-column label="绑定机器人" width="250">
             <template #default="scope">
               {{
@@ -76,9 +77,21 @@
                 @click="handleMapEdit(scope.row.id)"
                 >地图编辑</el-button
               >
-              <el-button type="primary" link>地图预览</el-button>
+              <el-button type="primary" link @click="handlePreview(scope.row)"
+                >地图预览</el-button
+              >
               <el-button type="primary" link>进入大屏</el-button>
-              <el-button type="danger" link>删除</el-button>
+              <el-popconfirm
+                title="是否确定删除?"
+                confirm-button-text="确定"
+                cancel-button-text="取消"
+                placement="top"
+                @confirm="handleDelete(scope.row.id)"
+              >
+                <template #reference>
+                  <el-button type="danger" link>删除</el-button>
+                </template>
+              </el-popconfirm>
             </template>
           </el-table-column>
         </el-table>
@@ -90,25 +103,41 @@
       :robotList="robotList"
       @handleAddComplete="handleAddComplete"
     />
+    <modal-preview
+      :width="selectedRecord?.width"
+      :height="selectedRecord?.height"
+      :pointList="selectedRecord?.dragMapPointDTOS ?? []"
+      :lineList="selectedRecord?.dragMapLineDTOS ?? []"
+      :dragItemList="selectedRecord?.dragIconMaps ?? []"
+      ref="modalPreviewRef"
+    />
   </div>
 </template>
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import { getLabListApi, getRobotListApi, queryMapListApi } from "@/api/api";
+import {
+  deleteMapApi,
+  getLabListApi,
+  getRobotListApi,
+  queryMapListApi,
+} from "@/api/api";
 import MapModal from "./components/MapModal.vue";
+import ModalPreview from "../agvEdit/components/ModalPreview.vue";
 import { Options } from ".";
 
 const router = useRouter();
 const labList = ref<Array<Options>>([]);
-const robotList = ref<Array<Options>>([]);
-const mapModalRef = ref();
+const robotList = ref<Array<any>>([]);
+const mapModalRef = ref(); // 新增/编辑弹窗组件
+const modalPreviewRef = ref(); // 预览弹窗组件
 const searchForm = reactive({
   typeId: undefined,
   name: undefined,
   robotId: undefined,
 });
 const tableData = ref([]);
+const selectedRecord = ref();
 
 // 获取实验室列表
 const getLabList = () => {
@@ -125,14 +154,18 @@ const getLabList = () => {
 const getRobotList = () => {
   getRobotListApi().then((res: any) => {
     if (res.code === 200) {
-      robotList.value = res.data.map((item: any) => ({
-        label: item.robotName,
-        value: item,
-      }));
+      robotList.value = res.data || [];
     }
   });
 };
 
+const handleReset = () => {
+  Object.assign(searchForm, {
+    typeId: undefined,
+    name: undefined,
+    robotId: undefined,
+  });
+};
 const handleSearch = () => {
   const params = {
     ...searchForm,
@@ -155,6 +188,7 @@ const handleAdd = () => {
   mapModalRef.value.handleAdd(true);
 };
 const handleAddComplete = () => {
+  handleReset();
   handleSearch();
 };
 // 地图信息编辑（列表项）
@@ -166,6 +200,47 @@ const handleMapEdit = (id: number) => {
   router.push({
     name: "AGVEdit",
     params: { id },
+  });
+};
+// 地图预览
+const handlePreview = (record: any) => {
+  selectedRecord.value = {
+    ...record,
+    width: parseFloat(record.width),
+    height: parseFloat(record.height),
+    dragIconMaps:
+      record.dragIconMaps?.map((item: any) => ({
+        ...item,
+        x: parseFloat(item.x),
+        y: parseFloat(item.y),
+        width: parseFloat(item.width),
+        height: parseFloat(item.height),
+        fontSize: parseFloat(item.fontSize),
+        rotate: parseFloat(item.rotate),
+      })) || [],
+    dragMapLineDTOS:
+      record.dragMapLineDTOS?.map((item: any) => ({
+        ...item,
+        startX: parseFloat(item.startX),
+        startY: parseFloat(item.startY),
+        endX: parseFloat(item.endX),
+        endY: parseFloat(item.endY),
+      })) || [],
+    dragMapPointDTOS:
+      record.dragMapPointDTOS?.map((item: any) => ({
+        ...item,
+        posX: parseFloat(item.posX),
+        posY: parseFloat(item.posY),
+      })) || [],
+  };
+  modalPreviewRef.value.showModal();
+};
+// 地图删除
+const handleDelete = (id: number) => {
+  deleteMapApi({ ids: id }).then((res: any) => {
+    ElMessage.success(res.message);
+    handleReset();
+    handleSearch();
   });
 };
 

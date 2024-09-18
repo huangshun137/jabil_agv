@@ -124,7 +124,7 @@ service.interceptors.response.use(
     // 未设置状态码则默认成功状态
     const code = res.data.code || 200;
     // 获取错误信息
-    const msg = res.data.msg || "请求失败";
+    const msg = res.data.msg || res.data.message || "请求失败";
     // 二进制数据则直接返回
     if (
       res.request.responseType === "blob" ||

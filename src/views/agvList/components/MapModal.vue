@@ -33,13 +33,14 @@
           multiple
           collapse-tags
           collapse-tags-tooltip
+          :max-collapse-tags="3"
           placeholder="请选择绑定机器人"
         >
           <el-option
-            v-for="item in robotList"
+            v-for="item in robotOptions"
             :label="item.label"
             :value="item.value"
-            :key="item.value.robotId + item.label"
+            :key="item.value + item.label"
           />
         </el-select>
       </el-form-item>
@@ -53,19 +54,27 @@
   </el-dialog>
 </template>
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { FormInstance, FormRules } from "element-plus";
 import { Options } from "../";
 import { createMapInfo, updateMapInfo } from "@/api/api";
 import { nextTick } from "process";
 
-defineProps<{
+const props = defineProps<{
   labList: Array<Options>;
-  robotList: Array<Options>;
+  robotList: Array<any>;
 }>();
 const emit = defineEmits<{
   (e: "handleAddComplete"): void;
 }>();
+const robotOptions = computed(() => {
+  return (
+    props.robotList?.map((item) => ({
+      label: item.robotName,
+      value: item.robotId,
+    })) ?? []
+  );
+});
 const addFlag = ref<boolean>(true);
 const modalVisible = ref<boolean>(false);
 const mapFormRef = ref<FormInstance>();
@@ -88,6 +97,9 @@ const handleConfirm = () => {
     if (valid) {
       const params = {
         ...addMapForm,
+        robots: props.robotList.filter((item) =>
+          (addMapForm.robots as any[]).includes(item.robotId)
+        ),
       };
       let request = null;
       if (addFlag.value) {
@@ -115,7 +127,10 @@ const handleAdd = (_addFlag: boolean, mapInfo: any) => {
   nextTick(() => {
     mapFormRef.value!.resetFields();
     if (!_addFlag) {
-      Object.assign(addMapForm, { ...mapInfo });
+      Object.assign(addMapForm, {
+        ...mapInfo,
+        robots: mapInfo.robots?.map((item: any) => item.robotId) ?? [],
+      });
     }
   });
 };
