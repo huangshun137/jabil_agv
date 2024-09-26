@@ -1,8 +1,8 @@
 <template>
   <div class="agv-status mt-3">
     <BorderBox13>
-      <div class="bg-color-black">
-        <div class="d-flex pt-2 pl-2 mt-2">
+      <div class="bg-color-black d-flex flex-column">
+        <div class="d-flex pt-2 pl-2 mt-2 mb-2">
           <span>
             <svg-icon
               name="icon-layer-group"
@@ -14,73 +14,68 @@
             <span style="font-size: 18px; color: white">AGV状态</span>
           </div>
         </div>
-        <div class="mt-3 p-3">AGV 1#状态：{{ statusInfo.status }}</div>
-        <div class="water px-2">
-          <water-level-pond
-            class="dv-wa-le-po"
-            :config="{
-              data: [statusInfo.battery || 0],
-              shape: 'roundRect',
-              formatter: '{value}%',
-              waveNum: 3,
-            }"
-          />
-        </div>
+        <el-scrollbar ref="scrollbarRef" class="flex-1">
+          <div class="agv-status-content">
+            <template
+              v-for="item in robotsStatus"
+              :key="item.robotId + item.status + item.battery"
+            >
+              <div class="mt-3 p-3">
+                AGV {{ item.robotId }}#状态：{{ item.status }}
+              </div>
+              <div class="water px-2">
+                <water-level-pond
+                  class="dv-wa-le-po"
+                  :config="{
+                    data: [item.battery || 0],
+                    shape: 'roundRect',
+                    formatter: '{value}%',
+                    waveNum: 3,
+                  }"
+                />
+              </div>
+            </template>
+          </div>
+        </el-scrollbar>
       </div>
     </BorderBox13>
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, watch } from "vue";
+import { nextTick, onUnmounted, ref, watch } from "vue";
+import { ElScrollbar } from "element-plus";
 import { WaterLevelPond, BorderBox13 } from "@kjgl77/datav-vue3";
-import useMqtt from "@/utils/useMqtt";
+import { RobotStatusInfo } from "..";
+import { autoScroll } from "@/utils/utils";
 
-const { initMqtt, isConnected, messages, subscribeToTopic, disconnect } =
-  useMqtt();
+const props = defineProps<{ robotsStatus: RobotStatusInfo[] }>();
+const scrollbarRef = ref<InstanceType<typeof ElScrollbar>>();
+let clearScrollTimers: () => void;
 
-const statusInfo = reactive({
-  battery: 0,
-  status: "",
-});
-// MQTT连接后订阅消息
 watch(
-  () => isConnected.value,
-  (newValue) => {
-    if (newValue) {
-      subscribeToTopic("/layout/robot_status/76");
-      subscribeToTopic("/robot/power/76");
+  () => props.robotsStatus,
+  (value) => {
+    if (value.length > 0) {
+      nextTick(() => {
+        const scrollRef = scrollbarRef.value?.wrapRef;
+        const scrollHeight =
+          (scrollRef?.scrollHeight || 0) - (scrollRef?.clientHeight || 0);
+        if (scrollHeight > 0 && scrollbarRef.value) {
+          clearScrollTimers && clearScrollTimers();
+          clearScrollTimers = autoScroll(scrollbarRef.value, scrollHeight);
+        }
+      });
     }
   }
 );
-watch(
-  () => messages.value,
-  (messages) => {
-    if (messages.length === 0) return;
-    const powerMsg = messages.find(
-      (msg) => msg.topic === "/robot/power/76"
-    )?.msg;
-    if (powerMsg) {
-      statusInfo.battery = powerMsg.battery_value;
-    }
-    const stateMsg = messages.find(
-      (msg) => msg.topic === "/layout/robot_status/76"
-    )?.msg;
-    if (stateMsg) {
-      statusInfo.status = stateMsg.curStatus;
-    }
-  }
-);
-onMounted(() => {
-  initMqtt(import.meta.env.VITE_APP_WS_URL, { path: "/mqtt" });
-});
+
 onUnmounted(() => {
-  // 在组件卸载时断开 MQTT 连接
-  disconnect();
+  clearScrollTimers && clearScrollTimers();
 });
 </script>
 <style lang="less" scoped>
 @box-width: 300px;
-@box-height: 407px;
+@box-height: 510px;
 
 .agv-status {
   height: @box-height;

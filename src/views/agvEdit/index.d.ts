@@ -7,7 +7,9 @@ type ModalContentKey =
   | "color"
   | "text"
   | "fontSize"
-  | "robotId";
+  | "robotId"
+  // | "deviceType"
+  | "deviceId";
 
 interface ModalContent {
   label: string;
@@ -22,7 +24,7 @@ interface DragItemTemplate {
   width: number;
   height: number;
   color?: string;
-  type: "_svg" | "point" | "line" | "custom" | "text" | "car";
+  type: "_svg" | "point" | "line" | "custom" | "text" | "car" | "device";
 }
 
 interface AddItem {
@@ -39,12 +41,38 @@ interface AddItem {
   text?: string;
   fontSize?: number;
   robotId?: number;
+  deviceId?: number;
+  deviceType?: string;
+  deviceName?: string;
+  deviceCode?: string;
 }
 
+interface DeviceOptionItem {
+  bgColor: string;
+  ownColor: string;
+  keyValue: string;
+  label: string;
+}
+// 设备信息类型定义
+interface DeviceItem {
+  startIndex: number;
+  endIndex: number;
+  bgColor: string;
+  ownColor: string;
+  deviceType: string;
+  fontSize: number;
+  deviceType: string;
+  sort: number;
+  keyName: string; // 关键字key（保存的数据的key）
+  keyValue: string; // 显示的值
+  label: string; // 显示的标签值
+  options: Array<DeviceOptionItem>;
+}
 interface DragItem extends AddItem {
   id: number;
   iconId: number;
   dragFlag: boolean;
+  deviceData?: Array<DeviceItem>;
 }
 
 interface MouseCoor {
@@ -108,6 +136,14 @@ interface SizeInfo {
   height: number;
 }
 
+// 设备信息(接口下拉)
+interface DeviceInfo {
+  deviceId: number;
+  deviceName: string;
+  deviceCode: string;
+  deviceType: string;
+}
+
 export {
   ModalContentKey,
   ModalContent,
@@ -122,4 +158,7 @@ export {
   PointInfo,
   LineInfo,
   SizeInfo,
+  DeviceInfo,
+  DeviceOptionItem,
+  DeviceItem,
 };

@@ -19,6 +19,8 @@
           :handleSave="handleSave"
           :handlePreview="handlePreview"
           :handleBack="handleBack"
+          :hasDeviceItem="dragItems.some((item) => item.type === 'device')"
+          :handleAddDeviceInfo="handleAddDeviceInfo"
           @updateMapInfo="updateMapInfo"
           @updateSizeInfo="updateSizeInfo"
           @updatePointList="updatePointList"
@@ -36,6 +38,8 @@
             :onDrag="onDrag"
             :onDragStop="onDragStop"
             :onRotateStop="onRotateStop"
+            :onActivated="onActivated"
+            :onDeactivated="onDeactivated"
             :handleItemDblClick="handleItemDblClick"
             ref="mapContentRef"
           />
@@ -54,17 +58,26 @@
       @handleRefreshIconList="handleRefreshIconList"
     />
     <modal-preview
-      :width="mapInfo?.width"
-      :height="mapInfo?.height"
+      v-if="mapInfo?.width && mapInfo?.height"
+      :width="mapInfo.width"
+      :height="mapInfo.height"
+      :scale="mapInfo.scale"
       :pointList="pointList"
       :lineList="lineList"
       :dragItemList="dragItems"
+      :robotList="robotList"
       ref="modalPreviewRef"
     />
+    <modal-device
+      :device-id="activeDragItem?.deviceId || 0"
+      :deviceData="activeDragItem?.deviceData ?? []"
+      :handleConfirm="handleDeviceConfirm"
+      ref="modalDeviceRef"
+    ></modal-device>
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { omit } from "lodash-es";
 import { useRouter } from "vue-router";
 import AgvTitle from "@/components/AgvTitle.vue";
@@ -73,8 +86,10 @@ import DragTemplate from "./components/DragTemplate.vue";
 import MapBtn from "./components/MapBtn.vue";
 import MapContent from "./components/MapContent.vue";
 import ModalPreview from "./components/ModalPreview.vue";
+import ModalDevice from "./components/ModalDevice.vue";
 import {
   AddItem,
+  DeviceItem,
   DragItem,
   EditItem,
   LineInfo,
@@ -84,6 +99,7 @@ import {
 } from ".";
 import { getMapInfoApi, updateMapInfoApi } from "@/api/api";
 import { nextTick } from "process";
+import { RobotInfo } from "../agvList";
 
 const props = defineProps<{
   id: string;
@@ -96,10 +112,16 @@ const mapContainerRef = ref(); // 外部容器div
 const mapContentRef = ref(); // 地图拖拽组件
 const modalInfoRef = ref(); // 新增/编辑弹窗组件
 const modalPreviewRef = ref(); // 预览弹窗组件
+const modalDeviceRef = ref(); // 设备配置弹窗组件
 const dragItems = reactive<Array<DragItem>>([]);
 const pointList = reactive<Array<PointInfo>>([]);
 const lineList = reactive<Array<LineInfo>>([]);
-const robotList = ref<Array<any>>([]);
+const robotList = ref<Array<RobotInfo>>([]);
+const activeDragItemIndex = ref<number>(); // 激活的拖拽元素
+
+const activeDragItem = computed(() => {
+  return dragItems[activeDragItemIndex.value || 0];
+});
 
 const canvasWidth = ref<number>(1000);
 const canvasHeight = ref<number>(533);
@@ -127,16 +149,31 @@ const updateLineList = (_lineList: Array<LineInfo>) => {
 const handleDelete = (index: number) => {
   dragItems.splice(index, 1);
 };
+// 新建拖拽图标弹窗确认
 const handleConfrimAdd = (data: AddItem | EditItem, flag: "add" | "edit") => {
   console.log("data:::", data);
   if (flag === "add") {
+    // 新建
+    let _deviceData: Array<DeviceItem> = [];
+    if (data.type === "device") {
+      console.log("dragItems::::", dragItems);
+      const sameDeviceItem = dragItems.find(
+        (item) => item.deviceType === data.deviceType
+      );
+      console.log("sameDeviceItem:::", sameDeviceItem);
+      if (sameDeviceItem) {
+        _deviceData = sameDeviceItem.deviceData ?? [];
+      }
+    }
     dragItems.push({
       ...(omit(data, ["index"]) as AddItem),
-      iconId: data.id,
+      iconId: data.id || (data as EditItem).iconId,
       id: -Math.random(),
+      deviceData: [..._deviceData],
       dragFlag: false,
     });
   } else {
+    // 编辑
     const _data = data as EditItem;
     dragItems[_data.index] = omit(_data, ["index"]);
   }
@@ -185,6 +222,31 @@ const onRotateStop = (degree: number, index: number) => {
     rotate: parseFloat(degree.toFixed(2)),
   };
 };
+// 拖拽item激活
+const onActivated = (index: number) => {
+  activeDragItemIndex.value = index;
+};
+const onDeactivated = () => {
+  // activeDragItemIndex.value = undefined;
+};
+// 编辑机台数据结构
+const handleAddDeviceInfo = () => {
+  if (
+    (!activeDragItemIndex.value && activeDragItemIndex.value !== 0) ||
+    dragItems[activeDragItemIndex.value]?.type !== "device"
+  ) {
+    ElMessage.warning("请选择需要添加的机台");
+    return;
+  }
+  // const dragItem = dragItems[activeDragItemIndex.value];
+  // dragItem.deviceData = [];
+
+  modalDeviceRef.value.showModal();
+};
+// 设备数据配置弹窗确认
+const handleDeviceConfirm = (data: Array<DeviceItem>) => {
+  dragItems[activeDragItemIndex.value!].deviceData = [...data];
+};
 
 const handleItemDblClick = (index: number) => {
   modalInfoRef.value.handleEdit({
@@ -220,6 +282,14 @@ const getMapInfo = () => {
       return;
     }
 
+    robotList.value = res.data.robots ?? [];
+    mapInfo.value = {
+      ...res.data,
+      show: false,
+    };
+    if (!res.data.width || !res.data.height) {
+      return;
+    }
     const data = res.data;
     // 处理当前页面与接口返回大小的缩放比例，适配当前屏幕
     handleScale(data);
@@ -233,7 +303,6 @@ const getMapInfo = () => {
       height: handleDataFormat(data.height),
       scale: parseFloat(data.scale || "1"),
     };
-    robotList.value = res.data.robots ?? [];
     const _dragItems =
       res.data.dragIconMaps?.map((item: any) => ({
         ...item,

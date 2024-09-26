@@ -17,17 +17,30 @@ export default function useDraw() {
   let innerHeight = window.innerHeight;
   const calcRate = (
     container: HTMLElement | null = null,
-    width = 1920,
-    height = 1080
+    width: number | null = null,
+    height: number | null = null
   ) => {
     if (container) {
       innerWidth = container.clientWidth;
       innerHeight = container.clientHeight;
+    } else {
+      innerWidth = window.innerWidth;
+      innerHeight = window.innerHeight;
     }
-    baseWidth = width;
-    baseHeight = height;
-    console.log("innerWidth::::", innerWidth);
-    console.log("baseWidth::::", baseWidth);
+    if (width) {
+      baseWidth = width;
+    } else {
+      baseWidth = 1920;
+    }
+    if (height) {
+      baseHeight = height;
+    } else {
+      baseHeight = 1080;
+    }
+    // console.log("innerWidth::::", innerWidth);
+    // console.log("innerHeight::::", innerHeight);
+    // console.log("baseWidth::::", baseWidth);
+    // console.log("baseHeight::::", baseHeight);
     // * 需保持的比例（默认1.77778）
     const baseProportion = parseFloat((baseWidth / baseHeight).toFixed(5));
     // 当前宽高比

@@ -17,7 +17,7 @@ const setModbusValueApi = (data: any) =>
 const modbusReconnected = () => postApi(baseURL + "/modbus/reconnected", {});
 
 // agv-home api
-// AgvTaskStatistic
+// 查询agv统计信息
 const getTaskStatisticApi = () =>
   getApiWithoutLoading(baseURL + "/task/getCountByFinish");
 
@@ -36,9 +36,16 @@ const queryIconList = (data: any) =>
 // 获取地图详情
 const getMapInfoApi = (id: string) =>
   getApi(baseURL + `/dragMap/getMapById/${id}`);
-// 获取地图详情
+// 更新地图详情
 const updateMapInfoApi = (data: any) =>
-  postApi(baseURL + "/dragMap/update", data);
+  postApi(baseURL + "/dragMap/updateIn", data);
+// 获取设备类型
+const getDeviceTypeApi = () => getApi(baseURL + "/device/selectType");
+// 获取设备列表
+const getDeviceListApi = () => getApi(baseURL + "/device/selectlist");
+// 获取机台属性
+const getDeviceAttrApi = (data: any) =>
+  getApi(baseURL + "/device/getDeviceAttriBute", data);
 
 // agvList api
 // 获取实验室列表
@@ -50,10 +57,11 @@ const queryMapListApi = (data: any) => getApi(baseURL + "/dragMap/list", data);
 // 新建地图
 const createMapInfo = (data: any) => postApi(baseURL + "/dragMap/create", data);
 // 更新地图
-const updateMapInfo = (data: any) => postApi(baseURL + "/dragMap/update", data);
+const updateMapInfo = (data: any) =>
+  postApi(baseURL + "/dragMap/updateOut", data);
 // 删除地图
 const deleteMapApi = (data: any) =>
-  deleteApi(baseURL + "/dragMap/delete", data);
+  deleteApi(baseURL + "/dragMap/deleteOne", data);
 
 export {
   baseURL,
@@ -72,6 +80,9 @@ export {
   queryIconList,
   getMapInfoApi,
   updateMapInfoApi,
+  getDeviceTypeApi,
+  getDeviceListApi,
+  getDeviceAttrApi,
   getLabListApi,
   getRobotListApi,
   queryMapListApi,

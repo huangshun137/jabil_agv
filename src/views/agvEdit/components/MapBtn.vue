@@ -1,21 +1,23 @@
 <template>
   <div class="map-btn">
-    <el-upload
-      accept="image/png, image/jpeg"
-      name="files"
-      :action="`${imgUploadUrl}/file/upload`"
-      :show-file-list="false"
-      :before-upload="beforeMapUpload"
-      :on-success="onMapUploadSuccess"
-      v-if="!mapInfo?.url"
-    >
-      <el-button type="primary">上传地图</el-button>
-      <template #tip>
-        <div class="el-upload__tip">
-          仅支持上传jpg、png文件，且文件大小不超过10M
-        </div>
-      </template>
-    </el-upload>
+    <template v-if="!mapInfo?.url">
+      <el-upload
+        accept="image/png, image/jpeg"
+        name="files"
+        :action="`${imgUploadUrl}/file/upload`"
+        :show-file-list="false"
+        :before-upload="beforeMapUpload"
+        :on-success="onMapUploadSuccess"
+      >
+        <el-button type="primary">上传地图</el-button>
+        <template #tip>
+          <div class="el-upload__tip">
+            仅支持上传jpg、png文件，且文件大小不超过10M
+          </div>
+        </template>
+      </el-upload>
+      <el-button class="back-btn" @click="handleBack">返回</el-button>
+    </template>
     <template v-else>
       <el-button
         type="primary"
@@ -35,10 +37,17 @@
       >
         <el-button type="primary">上传地图点位路径信息</el-button>
       </el-upload>
-      <el-button type="primary" class="float-r" @click="handleSave"
+      <el-button
+        type="primary"
+        v-if="hasDeviceItem"
+        @click="handleAddDeviceInfo"
+        class="ml-4"
+        >编辑机台数据结构</el-button
+      >
+      <el-button type="primary" class="float-r ml-2" @click="handleSave"
         >保存</el-button
       >
-      <el-button type="primary" class="float-r mr-2" @click="handlePreview"
+      <el-button type="primary" class="float-r" @click="handlePreview"
         >预览</el-button
       >
       <el-button class="float-r" @click="handleBack">返回</el-button>
@@ -50,6 +59,7 @@ import { nextTick } from "vue";
 import { UploadFile, UploadProps } from "element-plus";
 import { imgUploadUrl, baseImgUrl } from "@/api/api";
 import { LineInfo, MapInfo, PointInfo, SizeInfo } from "..";
+import { pxToMeterRate } from "@/constant/constant";
 
 const props = defineProps<{
   mapInfo: any;
@@ -57,9 +67,11 @@ const props = defineProps<{
   canvasWidth: number;
   canvasHeight: number;
   scale: number;
+  hasDeviceItem: boolean;
   handleSave: () => void;
   handlePreview: () => void;
   handleBack: () => void;
+  handleAddDeviceInfo: () => void;
 }>();
 const emit = defineEmits<{
   (e: "updateMapInfo", mapInfo: MapInfo): void;
@@ -69,7 +81,6 @@ const emit = defineEmits<{
 }>();
 
 const MapImgType = ["image/png", "image/jpeg"];
-const pxToMeterRate = 100; // 像素转米比例
 const pointOffset = -2; // 点位补偿值
 
 const beforeMapUpload: UploadProps["beforeUpload"] = (rawFile) => {
@@ -198,5 +209,13 @@ const handleMapJSONUpload = (uploadFile: UploadFile) => {
   position: relative;
   top: 1px;
   left: 10px;
+}
+.map-btn {
+  position: relative;
+  .back-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
 }
 </style>

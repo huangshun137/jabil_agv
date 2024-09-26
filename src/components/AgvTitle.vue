@@ -26,7 +26,7 @@
       <div class="d-flex aside-width">
         <div class="react-left ml-4 react-l-s">
           <span class="react-before"></span>
-          <span class="text">JABIL</span>
+          <span class="text logo"></span>
         </div>
         <div class="react-left ml-3"></div>
       </div>
@@ -191,6 +191,13 @@ onUnmounted(() => {
     .text {
       display: inline-block;
       transform: skewX(-45deg);
+    }
+    .logo {
+      height: 100%;
+      background: url(@/assets/img/logo.png) no-repeat;
+      background-size: auto 60%;
+      background-position: center left;
+      display: block;
     }
     &.react-l-s.ml-4 .text {
       font-size: 30px;

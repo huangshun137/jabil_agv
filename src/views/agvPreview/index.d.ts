@@ -4,4 +4,10 @@ interface RobotPositionInfo {
   angle: number;
 }
 
-export { RobotPositionInfo };
+interface DeviceStatusInfo {
+  deviceCode: number;
+
+  [key: string]: string;
+}
+
+export { RobotPositionInfo, DeviceStatusInfo };

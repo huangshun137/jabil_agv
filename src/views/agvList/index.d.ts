@@ -3,4 +3,11 @@ interface Options {
   value: any;
 }
 
-export { Options };
+interface RobotInfo {
+  robotId: number;
+  robotCode: string;
+  robotName: string;
+  robotType: string;
+}
+
+export { Options, RobotInfo };

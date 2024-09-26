@@ -9,12 +9,15 @@
       <div class="preview-container" ref="containerRef">
         <div class="preview-content" ref="appRef">
           <AgvPreview
+            v-if="width && height"
             ref="previewRef"
             :width="width"
             :height="height"
+            :scale="scale"
             :pointList="pointList"
             :lineList="lineList"
             :dragItemList="dragItemList"
+            :robot-list="robotList"
           />
         </div>
       </div>
@@ -27,13 +30,16 @@ import AgvPreview from "@/views/agvPreview/index.vue";
 import useDraw from "@/utils/useDraw";
 import { DragItem, LineInfo, PointInfo } from "..";
 import { nextTick } from "process";
+import { RobotInfo } from "@/views/agvList";
 
 const props = defineProps<{
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
+  scale: number;
   pointList: PointInfo[];
   lineList: LineInfo[];
   dragItemList: DragItem[];
+  robotList: RobotInfo[];
 }>();
 
 // * 适配处理

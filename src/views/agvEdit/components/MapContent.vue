@@ -41,7 +41,7 @@
       :h="item.height"
       :rotatable="true"
       :r="item.rotate"
-      class-name="drag-item"
+      :class-name="`drag-item${item.type === 'device' ? ' device-item' : ''}`"
       :lock-aspect-ratio="item.type === 'point'"
       @resizing="
         (x: number, y: number, width: number, height: number) =>
@@ -50,6 +50,8 @@
       @dragging="(x: number, y: number) => onDrag(x, y, index)"
       @dragstop="onDragStop(index)"
       @rotatestop="(degree: number) => onRotateStop(degree, index)"
+      @activated="onActivated(index)"
+      @deactivated="onDeactivated"
       @dblclick="handleItemDblClick(index)"
     >
       <SvgIconRemote
@@ -58,6 +60,56 @@
         :color="item.color"
         v-if="item.type === '_svg' || item.type === 'car'"
       />
+      <template v-if="item.type === 'device'">
+        <SvgIconRemote
+          :svgUrl="item.url!"
+          :size="Math.min(item.width, item.height)"
+          :color="item.color"
+          v-if="!item.deviceData || !item.deviceData.length"
+        />
+        <div
+          v-else
+          class="device-info"
+          :style="{
+            width: item.width + 'px',
+            height: item.height + 'px',
+            borderColor: item.color,
+          }"
+        >
+          <div class="info-title">{{ item.deviceName }}</div>
+          <p
+            class="info"
+            v-for="deviceInfo in item.deviceData"
+            :class="{
+              'info-btn':
+                !!deviceInfo.bgColor ||
+                deviceInfo.options?.some((i) => i.bgColor),
+            }"
+            :key="deviceInfo.keyName"
+            :style="{
+              backgroundColor:
+                deviceInfo.bgColor ||
+                deviceInfo.options?.[0]?.bgColor ||
+                'transparent',
+              color:
+                deviceInfo.ownColor ||
+                deviceInfo.options?.[0]?.ownColor ||
+                'white',
+              fontSize: (deviceInfo.fontSize || 12) + 'px',
+            }"
+          >
+            {{ deviceInfo.label
+            }}<template v-if="deviceInfo.label">：</template>
+            {{
+              deviceInfo.options?.length > 0
+                ? deviceInfo.options
+                    .map((item) => (deviceInfo.keyValue || "") + item.label)
+                    .join("/")
+                : deviceInfo.keyValue
+            }}
+          </p>
+        </div>
+      </template>
       <div
         v-else-if="item.type === 'line'"
         class="drag-line"
@@ -112,6 +164,8 @@ const props = defineProps<{
   onDrag: (x: number, y: number, index: number) => void;
   onDragStop: (index: number) => void;
   onRotateStop: (degree: number, index: number) => void;
+  onActivated: (index: number) => void;
+  onDeactivated: () => void;
   handleItemDblClick: (index: number) => void;
 }>();
 
@@ -178,6 +232,10 @@ defineExpose({
       outline: 1px dashed #ccc;
     }
 
+    &.device-item {
+      z-index: 9 !important;
+    }
+
     :deep(.handle-rot) {
       &::before,
       &::after {
@@ -224,6 +282,29 @@ defineExpose({
       height: 100%;
       background-color: rgba(0, 0, 0, 0.4);
       color: white;
+    }
+
+    .device-info {
+      border: 1px solid #1296db;
+      border-radius: 10px;
+      padding: 10px;
+      color: white;
+      font-size: 12px;
+      text-align: left;
+
+      .info-title {
+        border: 1px solid white;
+        font-size: 20px;
+        width: fit-content;
+      }
+      .info {
+        margin-bottom: 5px;
+      }
+      .info-btn {
+        padding: 5px 3px;
+        width: fit-content;
+        border-radius: 4px;
+      }
     }
   }
 }

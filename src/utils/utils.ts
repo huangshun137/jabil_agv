@@ -1,3 +1,5 @@
+import { ElScrollbar } from "element-plus";
+
 /**
  * 模拟请求池工厂函数
  * @param {number} concurrency 最大并发数
@@ -95,4 +97,84 @@ function extractNumber(str: string): number | null {
   return null;
 }
 
-export { requestQueue, formatTime, blobToImageUrl, hexToRgb, extractNumber };
+// 自动循环滚动
+const autoScroll = (
+  scrollbarRef: HTMLElement | InstanceType<typeof ElScrollbar>,
+  scrollHeight: number
+): (() => void) => {
+  let scrollInterval: NodeJS.Timeout | null,
+    scrollTimeout: NodeJS.Timeout | null;
+  let isScrolling = false; // 添加一个标志变量
+  const handleAutoScroll = () => {
+    if (isScrolling) return; // 避免重复调用
+    isScrolling = true;
+
+    if (scrollbarRef) {
+      (scrollbarRef as HTMLElement).scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+
+    const startScroll = () => {
+      let _scrollHeight = 0;
+
+      const intervalCallback = () => {
+        _scrollHeight += 4;
+        if (scrollbarRef) {
+          (scrollbarRef as HTMLElement).scrollTo({
+            top: _scrollHeight,
+            behavior: "smooth",
+          });
+        }
+
+        if (_scrollHeight >= scrollHeight) {
+          if (scrollInterval) {
+            clearInterval(scrollInterval);
+            scrollInterval = null;
+          }
+          isScrolling = false; // 标记滚动结束
+          setTimeout(handleAutoScroll, 2000); // 重新执行滚动
+        }
+      };
+
+      scrollInterval = setInterval(intervalCallback, 100);
+    };
+
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = null;
+    }
+
+    scrollTimeout = setTimeout(() => {
+      startScroll();
+    }, 3000);
+  };
+
+  // 清除定时器和间隔器的函数
+  const clearScrollTimers = () => {
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = null;
+    }
+
+    if (scrollInterval) {
+      clearInterval(scrollInterval);
+      scrollInterval = null;
+    }
+  };
+
+  clearScrollTimers();
+  handleAutoScroll();
+
+  return clearScrollTimers;
+};
+
+export {
+  requestQueue,
+  formatTime,
+  blobToImageUrl,
+  hexToRgb,
+  extractNumber,
+  autoScroll,
+};

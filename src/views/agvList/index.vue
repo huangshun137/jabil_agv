@@ -80,7 +80,12 @@
               <el-button type="primary" link @click="handlePreview(scope.row)"
                 >地图预览</el-button
               >
-              <el-button type="primary" link>进入大屏</el-button>
+              <el-button
+                type="primary"
+                link
+                @click="handleToAgvPage(scope.row.id)"
+                >进入大屏</el-button
+              >
               <el-popconfirm
                 title="是否确定删除?"
                 confirm-button-text="确定"
@@ -104,11 +109,14 @@
       @handleAddComplete="handleAddComplete"
     />
     <modal-preview
-      :width="selectedRecord?.width"
-      :height="selectedRecord?.height"
-      :pointList="selectedRecord?.dragMapPointDTOS ?? []"
-      :lineList="selectedRecord?.dragMapLineDTOS ?? []"
-      :dragItemList="selectedRecord?.dragIconMaps ?? []"
+      v-if="selectedRecord?.width && selectedRecord?.height"
+      :width="selectedRecord.width"
+      :height="selectedRecord.height"
+      :scale="selectedRecord.scale"
+      :pointList="selectedRecord.dragMapPointDTOS ?? []"
+      :lineList="selectedRecord.dragMapLineDTOS ?? []"
+      :dragItemList="selectedRecord.dragIconMaps ?? []"
+      :robotList="robotList"
       ref="modalPreviewRef"
     />
   </div>
@@ -124,11 +132,11 @@ import {
 } from "@/api/api";
 import MapModal from "./components/MapModal.vue";
 import ModalPreview from "../agvEdit/components/ModalPreview.vue";
-import { Options } from ".";
+import { Options, RobotInfo } from ".";
 
 const router = useRouter();
 const labList = ref<Array<Options>>([]);
-const robotList = ref<Array<any>>([]);
+const robotList = ref<Array<RobotInfo>>([]);
 const mapModalRef = ref(); // 新增/编辑弹窗组件
 const modalPreviewRef = ref(); // 预览弹窗组件
 const searchForm = reactive({
@@ -235,9 +243,16 @@ const handlePreview = (record: any) => {
   };
   modalPreviewRef.value.showModal();
 };
+// 进入大屏页面
+const handleToAgvPage = (id: number) => {
+  router.push({
+    name: "AGVPage",
+    params: { id },
+  });
+};
 // 地图删除
 const handleDelete = (id: number) => {
-  deleteMapApi({ ids: id }).then((res: any) => {
+  deleteMapApi({ id }).then((res: any) => {
     ElMessage.success(res.message);
     handleReset();
     handleSearch();

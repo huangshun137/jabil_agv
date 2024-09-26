@@ -19,12 +19,14 @@
     "lodash-es": "^4.17.21",
     "mqtt": "^5.9.1",
     "pinia": "^2.2.0",
+    "sortablejs": "^1.15.3",
     "vue": "^3.4.31",
     "vue-router": "^4.4.0",
     "vue3-colorpicker": "^2.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.12",
+    "@types/sortablejs": "^1.15.8",
     "@vitejs/plugin-vue": "^5.0.5",
     "less": "^4.2.0",
     "typescript": "^5.2.2",

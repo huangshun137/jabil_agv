@@ -56,13 +56,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
 import { FormInstance, FormRules } from "element-plus";
-import { Options } from "../";
+import { Options, RobotInfo } from "../";
 import { createMapInfo, updateMapInfo } from "@/api/api";
 import { nextTick } from "process";
 
 const props = defineProps<{
   labList: Array<Options>;
-  robotList: Array<any>;
+  robotList: Array<RobotInfo>;
 }>();
 const emit = defineEmits<{
   (e: "handleAddComplete"): void;
@@ -98,12 +98,16 @@ const handleConfirm = () => {
       const params = {
         ...addMapForm,
         robots: props.robotList.filter((item) =>
-          (addMapForm.robots as any[]).includes(item.robotId)
+          (addMapForm.robots as number[]).includes(item.robotId)
         ),
       };
       let request = null;
       if (addFlag.value) {
-        request = createMapInfo(params);
+        request = createMapInfo({
+          name: params.name,
+          robots: params.robots,
+          typeId: params.typeId,
+        });
       } else {
         request = updateMapInfo(params);
       }
@@ -130,6 +134,10 @@ const handleAdd = (_addFlag: boolean, mapInfo: any) => {
       Object.assign(addMapForm, {
         ...mapInfo,
         robots: mapInfo.robots?.map((item: any) => item.robotId) ?? [],
+      });
+    } else {
+      Object.assign(addMapForm, {
+        id: null,
       });
     }
   });

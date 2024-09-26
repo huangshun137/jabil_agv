@@ -112,6 +112,25 @@
             />
           </el-select>
         </template>
+        <template v-else-if="item.key === 'deviceId'">
+          <el-select
+            v-model="ruleForm.deviceId"
+            placeholder="请选择设备"
+            :disabled="modalType === 'edit'"
+          >
+            <el-option
+              v-for="item in deviceList"
+              :key="item.deviceId + item.deviceName"
+              :label="item.deviceName"
+              :value="item.deviceId"
+              :disabled="
+                dragItems.some(
+                  (i) => i.type === 'device' && i.deviceId === item.deviceId
+                )
+              "
+            />
+          </el-select>
+        </template>
         <template v-else>
           <el-input-number
             v-model="ruleForm[item.key]"
@@ -130,7 +149,13 @@
           {{ modalType === "edit" ? "删除" : "删除此模板图标" }}
         </el-button>
         <template v-if="modalType === 'edit'">
-          <el-button type="primary" @click="handleCopy"> 复制 </el-button>
+          <el-button
+            type="primary"
+            @click="handleCopy"
+            :disabled="ruleForm.type === 'device'"
+          >
+            复制
+          </el-button>
         </template>
         <el-button type="primary" @click="handleConfirm">确定</el-button>
       </div>
@@ -138,11 +163,12 @@
   </el-dialog>
 </template>
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   AddIconItem,
   AddIconModalContent,
   AddItem,
+  DeviceInfo,
   DragItem,
   EditItem,
   ModalContent,
@@ -156,7 +182,13 @@ import {
 } from "element-plus";
 import { nextTick } from "process";
 import { omit } from "lodash-es";
-import { createIconApi, deleteIconApi, imgUploadUrl } from "@/api/api";
+import {
+  createIconApi,
+  deleteIconApi,
+  getDeviceListApi,
+  imgUploadUrl,
+} from "@/api/api";
+import { RobotInfo } from "@/views/agvList";
 
 const baseImgUrl = import.meta.env.VITE_APP_IMG_BASE_URL;
 const modalContentList: ModalContent[] = [
@@ -171,6 +203,10 @@ const modalContentTextList: ModalContent[] = [
   { label: "文字", key: "text" },
   { label: "字体大小", key: "fontSize" },
 ];
+const modalContentDeviceList: ModalContent[] = [
+  // { label: "设备类型", key: "deviceType" },
+  { label: "设备名称", key: "deviceId" },
+];
 const addIconModalList: AddIconModalContent[] = [
   { label: "名称", key: "name" },
   { label: "默认宽度", key: "width" },
@@ -183,7 +219,7 @@ const props = defineProps<{
   canvasWidth: number;
   canvasHeight: number;
   mapId: number;
-  robotList: any[];
+  robotList: RobotInfo[];
   dragItems: DragItem[];
 }>();
 const emit = defineEmits<{
@@ -201,6 +237,7 @@ const modalVisible = ref<boolean>(false);
 const modalType = ref<"add" | "edit">("add");
 const ruleFormRef = ref<FormInstance>();
 const record = ref<AddItem | EditItem>();
+const deviceList = ref<DeviceInfo[]>([]); // 设备列表
 const ruleForm = reactive<AddItem | EditItem>({
   name: "",
   width: 0,
@@ -227,6 +264,7 @@ const rules = reactive<FormRules<AddItem>>({
   text: [{ required: true, message: "请输入文字", trigger: "blur" }],
   fontSize: [{ required: true, message: "请输入字体大小", trigger: "blur" }],
   robotId: [{ required: true, message: "请选择绑定小车" }],
+  deviceId: [{ required: true, message: "请选择设备" }],
 });
 const addRules = reactive<FormRules<AddIconItem>>({
   name: [{ required: true, message: "请输入名称", trigger: "blur" }],
@@ -244,6 +282,8 @@ const formItems = computed(() => {
       ...modalContentList,
       { label: "绑定小车", key: "robotId" } as ModalContent,
     ];
+  } else if (ruleForm.type === "device") {
+    return [...modalContentList, ...modalContentDeviceList];
   } else {
     return modalContentList;
   }
@@ -260,7 +300,11 @@ const handleAdd = (addItem: AddItem) => {
     } else {
       ruleFormRef.value!.resetFields();
       record.value = { ...addItem };
-      Object.assign(ruleForm as AddItem, { ...addItem });
+      Object.assign(ruleForm as AddItem, {
+        ...addItem,
+        deviceId: null,
+        robotId: null,
+      });
     }
   });
 };
@@ -375,6 +419,19 @@ const handleCopy = () => {
             ? ruleForm.y - 20
             : ruleForm.y + 20,
       };
+      if (ruleForm.type === "car") {
+        const robots = props.dragItems
+          .filter((item) => item.type === "car")
+          .map((item) => item.robotId);
+        if (robots.length >= props.robotList.length) {
+          ElMessage.warning("已添加所有车辆，请先删除车辆后再添加");
+          return;
+        } else {
+          _ruleForm.robotId = props.robotList.find(
+            (item) => !robots.includes(item.robotId)
+          )?.robotId;
+        }
+      }
       emit("handleConfrimAdd", _ruleForm as AddItem, "add");
       handleModalClose();
     }
@@ -384,7 +441,7 @@ const handleConfirm = () => {
   ruleFormRef.value!.validate((valid: boolean) => {
     if (valid) {
       if (addFlag.value) {
-        console.log(addRuleForm);
+        // 创建图标模板
         const params = {
           ...addRuleForm,
           id: undefined,
@@ -393,7 +450,6 @@ const handleConfirm = () => {
           type: "_svg",
         };
         createIconApi(params).then((res: any) => {
-          console.log(res);
           if (res.code !== 200) {
             ElMessage.error(res.message);
             return;
@@ -403,9 +459,19 @@ const handleConfirm = () => {
           handleModalClose();
         });
       } else {
+        // 新建拖拽图标
+        const deviceItem = deviceList.value.find(
+          (item) => item.deviceId === ruleForm.deviceId
+        );
         emit(
           "handleConfrimAdd",
-          { ...(record.value as EditItem), ...ruleForm },
+          {
+            ...(record.value as EditItem),
+            ...ruleForm,
+            deviceType: deviceItem?.deviceType,
+            deviceName: deviceItem?.deviceName,
+            deviceCode: deviceItem?.deviceCode,
+          },
           modalType.value
         );
         handleModalClose();
@@ -413,6 +479,16 @@ const handleConfirm = () => {
     }
   });
 };
+
+const getDeviceType = () => {
+  getDeviceListApi().then((res: any) => {
+    deviceList.value = res.data?.list ?? [];
+  });
+};
+
+onMounted(() => {
+  getDeviceType();
+});
 
 defineExpose({
   handleAdd,
@@ -428,7 +504,8 @@ defineExpose({
       text-align: left;
     }
   }
-  .el-input {
+  .el-input,
+  .el-select {
     width: 95%;
   }
 

@@ -12,7 +12,11 @@
             :svgUrl="item.url!"
             :size="100"
             :color="item.color || '#1296DB'"
-            v-if="item.type === '_svg' || item.type === 'car'"
+            v-if="
+              item.type === '_svg' ||
+              item.type === 'car' ||
+              item.type === 'device'
+            "
           />
           <div
             v-else-if="item.type === 'line'"
@@ -97,6 +101,7 @@ const handleItemClick = (index: number) => {
     const carItemsLength = props.dragItems.filter(
       (item) => item.type === "car"
     ).length;
+    console.log("carItemsLength:::", carItemsLength);
     if (carItemsLength === props.robotsLength) {
       ElMessage({
         type: "warning",
