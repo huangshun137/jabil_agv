@@ -69,7 +69,7 @@
               >编辑</el-button
             >
             <el-button
-              type="primary"
+              :type="scope.row.isShow ? 'warning' : 'success'"
               link
               @click="
                 () => {

@@ -109,6 +109,10 @@ const initData = () => {
         y: parseFloat(item.y),
         fontSize: parseFloat(item.fontSize),
         rotate: parseFloat(item.rotate || "0"),
+        deviceData: item.deviceAttributeDTOS?.map((deviceItem: any) => ({
+          ...deviceItem,
+          fontSize: parseFloat(deviceItem.fontSize),
+        })),
       })) || [];
     pointList.value =
       dragMapPointDTOS?.map((item: any) => ({
@@ -161,11 +165,13 @@ watch(
         subscribeToTopic(`/site/${item.robotId}/productInfoCar`);
         // 订阅小车电量信息
         subscribeToTopic(`/robot/power/${item.robotId}`);
+        // 订阅机器人状态
+        subscribeToTopic(`/layout/robot_status/${item.robotId}`);
       });
       // 订阅大屏任务滚轮信息
       subscribeToTopic("/carTaskInfo");
-      // 订阅全部机器人状态
-      subscribeToTopic("/robot_status/all");
+      // // 订阅全部机器人状态
+      // subscribeToTopic("/robot_status/all");
     }
   }
 );
@@ -185,16 +191,33 @@ watch(
 );
 // 机器人状态
 watch(
-  () => messages.value.find((item) => item.topic === "/robot_status/all"),
-  (msgItem) => {
-    if (msgItem?.msg) {
-      robotsStatus.value.forEach((item) => {
-        const statusInfo = msgItem.msg[item.robotId];
-        if (statusInfo) {
-          item.status = statusInfo.curStatus;
+  () =>
+    messages.value.filter(
+      (item) => item.topic.indexOf("/layout/robot_status/") > -1 && item.msg
+    ),
+  (msgItems) => {
+    msgItems.forEach((msgItem) => {
+      const _robotId = msgItem.topic.split("/")[3];
+      const statusIndex = robotsStatus.value.findIndex(
+        (item) => item.robotId === parseInt(_robotId)
+      );
+      if (statusIndex > -1) {
+        const statusInfo = robotsStatus.value[statusIndex];
+        if (statusInfo.status !== msgItem.msg.curStatus) {
+          statusInfo.status = msgItem.msg.curStatus;
+          robotsStatus.value.splice(statusIndex, 1);
+          robotsStatus.value.unshift(statusInfo);
         }
-      });
-    }
+      }
+    });
+    // if (msgItem?.msg) {
+    //   robotsStatus.value.forEach((item) => {
+    //     const statusInfo = msgItem.msg[item.robotId];
+    //     if (statusInfo) {
+    //       item.status = statusInfo.curStatus;
+    //     }
+    //   });
+    // }
   },
   { deep: true }
 );
@@ -207,11 +230,16 @@ watch(
   (msgItems) => {
     msgItems.forEach((msgItem) => {
       const _robotId = msgItem.topic.split("/")[3];
-      const statusInfo = robotsStatus.value.find(
+      const statusIndex = robotsStatus.value.findIndex(
         (item) => item.robotId === parseInt(_robotId)
       );
-      if (statusInfo) {
-        statusInfo.battery = msgItem.msg.battery_value;
+      if (statusIndex > -1) {
+        const statusInfo = robotsStatus.value[statusIndex];
+        if (statusInfo.battery !== msgItem.msg.battery_value) {
+          statusInfo.battery = msgItem.msg.battery_value;
+          robotsStatus.value.splice(statusIndex, 1);
+          robotsStatus.value.unshift(statusInfo);
+        }
       }
     });
   },
@@ -220,17 +248,21 @@ watch(
 // 小车穴位信息
 watch(
   () =>
-    messages.value.filter(
-      (item) => item.topic.indexOf("/site/") > -1 && item.msg
-    ),
+    messages.value
+      .filter((item) => item.topic.indexOf("/site/") > -1 && item.msg)
+      .map((item) => ({
+        topic: item.topic,
+        msg: item.msg.caves ?? [],
+      })),
   (msgItems) => {
     msgItems.forEach((msgItem) => {
       const _robotId = msgItem.topic.split("/")[2];
-      const acupointItem = acupointInfo.value.find(
+      const acupointIndex = acupointInfo.value.findIndex(
         (item) => item.robotId === parseInt(_robotId)
       );
-      if (acupointItem) {
-        acupointItem.carCaves = msgItem.msg.caves?.map((item: any) => ({
+      if (acupointIndex > -1) {
+        const acupointItem = acupointInfo.value[acupointIndex];
+        const carCaves = msgItem.msg.map((item: any) => ({
           ...item,
           bg:
             item.caveStatus === 0
@@ -239,8 +271,16 @@ watch(
               ? "bg-orange"
               : "bg-green",
         }));
+        if (
+          JSON.stringify(carCaves) !== JSON.stringify(acupointItem.carCaves)
+        ) {
+          acupointItem.carCaves = [...carCaves];
+          acupointInfo.value.splice(acupointIndex, 1);
+          acupointInfo.value.unshift(acupointItem);
+        }
       }
     });
+    console.log("acupointInfo:::", acupointInfo.value);
   },
   { deep: true }
 );

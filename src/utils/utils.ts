@@ -103,7 +103,8 @@ const autoScroll = (
   scrollHeight: number
 ): (() => void) => {
   let scrollInterval: NodeJS.Timeout | null,
-    scrollTimeout: NodeJS.Timeout | null;
+    scrollTimeout: NodeJS.Timeout | null,
+    scrollTimeout2: NodeJS.Timeout | null;
   let isScrolling = false; // 添加一个标志变量
   const handleAutoScroll = () => {
     if (isScrolling) return; // 避免重复调用
@@ -134,7 +135,11 @@ const autoScroll = (
             scrollInterval = null;
           }
           isScrolling = false; // 标记滚动结束
-          setTimeout(handleAutoScroll, 2000); // 重新执行滚动
+          if (scrollTimeout2) {
+            clearTimeout(scrollTimeout2);
+            scrollTimeout2 = null;
+          }
+          scrollTimeout2 = setTimeout(handleAutoScroll, 2000); // 重新执行滚动
         }
       };
 
@@ -156,6 +161,10 @@ const autoScroll = (
     if (scrollTimeout) {
       clearTimeout(scrollTimeout);
       scrollTimeout = null;
+    }
+    if (scrollTimeout2) {
+      clearTimeout(scrollTimeout2);
+      scrollTimeout2 = null;
     }
 
     if (scrollInterval) {

@@ -10,40 +10,68 @@
             <span style="font-size: 18px; color: white">穴位信息</span>
           </div>
         </div>
-        <div class="flex-1 acu-point-content">
-          <el-scrollbar>
-            <template
-              v-for="item in acupointInfo"
-              :key="item.robotId + item.robotCode + item.robotName"
-            >
-              <div class="mt-2 p-3 pb-0">AGV {{ item.robotId }}# 穴位信息</div>
-              <div class="mt-1 pl-3">
-                <span class="acu-status bg-gray">无料</span>
-                <span class="acu-status bg-orange ml-2">有料</span>
-                <!-- <span class="acu-status bg-green ml-2">已测</span> -->
+        <el-scrollbar ref="acuScrollbarRef" class="flex-1">
+          <template
+            v-for="item in acupointInfo"
+            :key="item.robotId + item.robotCode + item.robotName"
+          >
+            <div class="mt-2 p-3 pb-0">AGV {{ item.robotId }}# 穴位信息</div>
+            <div class="mt-1 pl-3">
+              <span class="acu-status bg-gray">无料</span>
+              <span class="acu-status bg-orange ml-2">有料</span>
+              <!-- <span class="acu-status bg-green ml-2">已测</span> -->
+            </div>
+            <div style="display: flex; flex-wrap: wrap">
+              <div
+                class="box1 my-3 ml-3"
+                v-for="cave in item.carCaves"
+                :key="cave.no + cave.bg"
+                :class="cave.bg"
+              >
+                <div>{{ cave.no + 1 }}#</div>
               </div>
-              <div style="display: flex; flex-wrap: wrap">
-                <div
-                  class="box1 my-3 ml-3"
-                  v-for="cave in item.carCaves"
-                  :key="cave.no + cave.bg"
-                  :class="cave.bg"
-                >
-                  <div>{{ cave.no + 1 }}#</div>
-                </div>
-              </div>
-            </template>
-          </el-scrollbar>
-        </div>
+            </div>
+          </template>
+        </el-scrollbar>
       </div>
     </BorderBox13>
   </div>
 </template>
 <script setup lang="ts">
+import { nextTick, onUnmounted, ref, watch } from "vue";
 import { BorderBox13 } from "@kjgl77/datav-vue3";
+import { ElScrollbar } from "element-plus";
+import { autoScroll } from "@/utils/utils";
 import { AcupointInfo } from "..";
 
-defineProps<{ acupointInfo: AcupointInfo[] }>();
+const props = defineProps<{ acupointInfo: AcupointInfo[] }>();
+const acuScrollbarRef = ref<InstanceType<typeof ElScrollbar>>();
+let clearAcuScrollTimers: () => void;
+
+watch(
+  () => props.acupointInfo,
+  (value) => {
+    if (value.length > 0) {
+      nextTick(() => {
+        const scrollRef = acuScrollbarRef.value?.wrapRef;
+        const scrollHeight =
+          (scrollRef?.scrollHeight || 0) - (scrollRef?.clientHeight || 0);
+        if (scrollHeight > 0 && acuScrollbarRef.value) {
+          clearAcuScrollTimers && clearAcuScrollTimers();
+          clearAcuScrollTimers = autoScroll(
+            acuScrollbarRef.value,
+            scrollHeight
+          );
+        }
+      });
+    }
+  },
+  { deep: true, immediate: true }
+);
+
+onUnmounted(() => {
+  clearAcuScrollTimers && clearAcuScrollTimers();
+});
 </script>
 <style lang="less" scoped>
 @box-width: 280px;

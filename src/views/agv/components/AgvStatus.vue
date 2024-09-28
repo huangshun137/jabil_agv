@@ -42,7 +42,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { nextTick, onUnmounted, ref, watch } from "vue";
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { ElScrollbar } from "element-plus";
 import { WaterLevelPond, BorderBox13 } from "@kjgl77/datav-vue3";
 import { RobotStatusInfo } from "..";
@@ -64,10 +64,18 @@ watch(
           clearScrollTimers && clearScrollTimers();
           clearScrollTimers = autoScroll(scrollbarRef.value, scrollHeight);
         }
+        scrollbarRef.value?.update();
       });
     }
-  }
+  },
+  { deep: true, immediate: true }
 );
+
+onMounted(() => {
+  nextTick(() => {
+    scrollbarRef.value!.update();
+  });
+});
 
 onUnmounted(() => {
   clearScrollTimers && clearScrollTimers();

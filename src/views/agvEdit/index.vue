@@ -156,11 +156,9 @@ const handleConfrimAdd = (data: AddItem | EditItem, flag: "add" | "edit") => {
     // 新建
     let _deviceData: Array<DeviceItem> = [];
     if (data.type === "device") {
-      console.log("dragItems::::", dragItems);
       const sameDeviceItem = dragItems.find(
         (item) => item.deviceType === data.deviceType
       );
-      console.log("sameDeviceItem:::", sameDeviceItem);
       if (sameDeviceItem) {
         _deviceData = sameDeviceItem.deviceData ?? [];
       }
@@ -312,6 +310,10 @@ const getMapInfo = () => {
         y: handleDataFormat(item.y),
         fontSize: handleDataFormat(item.fontSize),
         rotate: parseFloat(item.rotate || "0"),
+        deviceData: item.deviceAttributeDTOS?.map((deviceItem: any) => ({
+          ...deviceItem,
+          fontSize: parseFloat(deviceItem.fontSize),
+        })),
       })) ?? [];
     dragItems.splice(0, dragItems.length, ..._dragItems);
     const _pointList =
@@ -346,6 +348,7 @@ const handleSave = () => {
     dragIconMaps: dragItems.map((item) => ({
       ...item,
       id: item.id < 0 ? null : item.id,
+      deviceAttributeDTOS: item.deviceData,
     })),
   };
   updateMapInfoApi(params).then((res: any) => {

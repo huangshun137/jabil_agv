@@ -83,31 +83,16 @@
                   !!deviceInfo.bgColor ||
                   deviceInfo.options?.some((i) => i.bgColor),
               }"
-              :key="deviceInfo.keyName"
+              :key="deviceInfo.keyName + item.deviceCode"
               :style="{
-                backgroundColor:
-                  deviceInfo.bgColor ||
-                  handleShowInfo(item.deviceCode!, deviceInfo.keyName, deviceInfo.options)?.bgColor ||
-                  'transparent',
-                color:
-                  deviceInfo.ownColor ||
-                  handleShowInfo(item.deviceCode!, deviceInfo.keyName, deviceInfo.options)?.ownColor ||
-                  'white',
+                backgroundColor: deviceInfo.bgColor || 'transparent',
+                color: deviceInfo.ownColor || 'white',
                 fontSize: (deviceInfo.fontSize || 12) + 'px',
               }"
             >
               {{ deviceInfo.label
               }}<template v-if="deviceInfo.label">：</template>
-              {{
-                deviceInfo.options?.length > 0
-                  ? (deviceInfo.keyValue || "") +
-                    (handleShowInfo(
-                      item.deviceCode!,
-                      deviceInfo.keyName,
-                      deviceInfo.options
-                    )?.label || "")
-                  : deviceInfo.keyValue
-              }}
+              {{ deviceInfo.showKeyValue }}
             </p>
           </div>
         </template>
@@ -144,18 +129,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import useMqtt from "@/utils/useMqtt";
-import {
-  DeviceItem,
-  DeviceOptionItem,
-  DragItem,
-  LineInfo,
-  PointInfo,
-} from "../agvEdit";
+import { DragItem, LineInfo, PointInfo } from "../agvEdit";
 import { RobotInfo } from "../agvList";
 import { pxToMeterRate } from "@/constant/constant";
 import { extractNumber } from "@/utils/utils";
-import { DeviceStatusInfo } from ".";
-import handle from "mqtt/lib/handlers/index";
+import { DeviceItemShow, DragItemShow } from ".";
 
 const props = withDefaults(
   defineProps<{
@@ -177,15 +155,18 @@ const width = ref<number>(props.width);
 const height = ref<number>(props.height);
 const pointList = ref<PointInfo[]>(props.pointList);
 const lineList = ref<LineInfo[]>(props.lineList);
-const dragItemList = ref<DragItem[]>(
-  props.dragItemList.filter((item) => item.type !== "car")
+const dragItemList = ref<DragItemShow[]>(
+  JSON.parse(
+    JSON.stringify(props.dragItemList.filter((item) => item.type !== "car"))
+  )
 );
 const carList = ref<DragItem[]>(
-  props.dragItemList.filter((item) => item.type === "car")
+  JSON.parse(
+    JSON.stringify(props.dragItemList.filter((item) => item.type === "car"))
+  )
 );
 const mqttUrl = ref<string>(props.mqttUrl || "ws://192.168.1.88:8083");
 const robotList = ref<Array<RobotInfo>>(props.robotList);
-const deviceStatusList = ref<Array<DeviceStatusInfo>>([]);
 
 const { initMqtt, isConnected, messages, subscribeToTopic, disconnect } =
   useMqtt();
@@ -243,62 +224,51 @@ const handleInit = () => {
 // mqtt设备信号处理
 const handleDeviceStatus = (infoStr: string) => {
   // "M0:1100100010,N0000;M1:0000000000,N0000"
-  const deviceItemList = dragItemList.value.filter(
-    (item) =>
-      item.type === "device" && item.deviceData && item.deviceData.length > 0
-  );
-  if (!deviceItemList.length) {
-    return;
-  }
+  // 单个设备信号
   const _deviceStatusList = infoStr.split(";");
-  _deviceStatusList.forEach((status: string) => {
-    const [deviceCodeStr, statusStr] = status.split(":");
-    if (extractNumber(deviceCodeStr) === null) {
+  const _deviceCodeList = _deviceStatusList
+    .map((item) => {
+      const _deviceCode = extractNumber(item.split(":")[0]);
+      return _deviceCode || _deviceCode === 0 ? _deviceCode + 1 : null;
+    })
+    .filter(Boolean);
+  dragItemList.value.forEach((dragItem: DragItem) => {
+    if (
+      dragItem.type !== "device" ||
+      !dragItem.deviceData ||
+      dragItem.deviceData.length === 0
+    ) {
       return;
     }
-    const deviceCode: number = extractNumber(deviceCodeStr)! + 1;
-    // 设备状态信号
-    const deviceStatusStr = statusStr.split(",")[0];
-    // 拖拽列表中设备信息
-    const _deviceItem: DragItem | undefined = deviceItemList.find(
-      (item) => parseInt(item.deviceCode || "") !== deviceCode
+    const deviceIndex = _deviceCodeList.indexOf(
+      parseInt(dragItem.deviceCode || "")
     );
-    if (!deviceStatusStr || !_deviceItem) return;
-    // 保存的设备信息
-    const deviceItem = deviceStatusList.value.find(
-      (item) => item.deviceCode === deviceCode
-    );
-    if (deviceItem) {
-      _deviceItem.deviceData!.forEach((item: DeviceItem) => {
-        deviceItem[item.keyName] = deviceStatusStr.substring(
-          item.startIndex - 1,
-          item.endIndex - 1
-        );
-      });
-    } else {
-      const _statusItem: DeviceStatusInfo = { deviceCode } as DeviceStatusInfo;
-      _deviceItem.deviceData!.forEach((item: DeviceItem) => {
-        _statusItem[item.keyName] = deviceStatusStr.substring(
-          item.startIndex - 1,
-          item.endIndex - 1
-        );
-      });
-      deviceStatusList.value.push(_statusItem);
-    }
+    if (deviceIndex === -1) return;
+    dragItem.deviceData.forEach((item: DeviceItemShow) => {
+      item.showKeyValue = item.keyValue;
+      const _statusItem = _deviceStatusList[deviceIndex].split(":")[1];
+      const _keyValue = _statusItem.substring(
+        item.startIndex - 1,
+        item.endIndex - 1
+      );
+      // 没有配置匹配项则直接赋值keyValue
+      if (!item.options || item.options.length === 0) {
+        item.showKeyValue = (item.keyValue || "") + _keyValue;
+        return;
+      }
+      const optionItem = item.options?.find((i) => i.keyValue === _keyValue);
+      if (optionItem) {
+        item.showKeyValue = (item.keyValue || "") + optionItem.label;
+        if (optionItem.bgColor) {
+          item.bgColor = optionItem.bgColor;
+        }
+        if (optionItem.ownColor) {
+          item.ownColor = optionItem.ownColor;
+        }
+      }
+    });
   });
-};
-
-// 处理设备显示信息
-const handleShowInfo = (
-  deviceCode: string,
-  keyName: string,
-  options: Array<DeviceOptionItem>
-) => {
-  const deviceItem = deviceStatusList.value.find(
-    (item) => item.deviceCode === parseInt(deviceCode)
-  );
-  if (!deviceItem) return null;
-  return options.find((item) => item.keyValue === deviceItem[keyName]);
+  console.log(dragItemList.value);
 };
 
 onMounted(() => {
@@ -344,8 +314,8 @@ watch(
     const cncStatus = topicInfoList.find(
       (topicInfo) => topicInfo.topic === "/CNC_Status"
     );
-    if (cncStatus?.msg) {
-      handleDeviceStatus(cncStatus.msg);
+    if (cncStatus?.msg?.CNC_Sta) {
+      handleDeviceStatus(cncStatus.msg.CNC_Sta);
     }
   },
   { deep: true }
@@ -383,6 +353,7 @@ watch(
   }
   .icon-device {
     z-index: 9;
+    transition: all 0.1s;
   }
   .drag-line {
     border-radius: 1px;

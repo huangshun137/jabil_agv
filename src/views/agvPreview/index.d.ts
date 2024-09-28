@@ -1,3 +1,4 @@
+import { DeviceItem, DragItem } from "../agvEdit";
 interface RobotPositionInfo {
   x: number;
   y: number;
@@ -10,4 +11,12 @@ interface DeviceStatusInfo {
   [key: string]: string;
 }
 
-export { RobotPositionInfo, DeviceStatusInfo };
+interface DeviceItemShow extends DeviceItem {
+  showKeyValue?: string;
+}
+
+interface DragItemShow extends DragItem {
+  deviceData?: Array<DeviceItemShow>;
+}
+
+export { RobotPositionInfo, DeviceStatusInfo, DragItemShow, DeviceItemShow };
